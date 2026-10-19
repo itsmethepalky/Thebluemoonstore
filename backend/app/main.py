@@ -24,6 +24,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
+        "https://thebluemoonstore.onrender.com",
         "http://127.0.0.1:8001",
         "http://localhost:8001",
     ],
