@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional
 
-from backend.app.auth import get_current_user
-from backend.app.supabase import supabase_admin
-from backend.app.supabase_retry import (
+from ..auth import get_current_user
+from ..supabase import supabase_admin
+from ..supabase_retry import (
     execute_read_with_retry,
     execute_write_safely,
     is_transient_supabase_error,
