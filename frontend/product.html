@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Product — The Blue Moon</title>
+
+  <link rel="stylesheet" href="css/store.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+
+</head>
+
+<body>
+
+<header class="store-header">
+  <div class="store-container nav-inner">
+
+    <a href="/" class="store-logo">
+      <span class="logo-main">THE BLUE MOON</span>
+      <span class="logo-sub">EVERYDAY ESSENTIALS</span>
+    </a>
+
+    <nav class="store-nav" aria-label="Main navigation">
+  <a href="/" title="Home" aria-label="Home">
+    <i class="bi bi-house-door"></i>
+    <span>Home</span>
+  </a>
+
+  <a href="/shop" title="Shop" aria-label="Shop">
+    <i class="bi bi-grid"></i>
+    <span>Shop</span>
+  </a>
+
+  <a href="/orders" title="My Orders" aria-label="My Orders">
+    <i class="bi bi-box-seam"></i>
+    <span>Orders</span>
+  </a>
+
+  <a href="/cart" class="cart-link" title="Cart" aria-label="Cart">
+    <i class="bi bi-cart3"></i>
+    <span>Cart</span>
+    <span class="cart-count" id="cartCount">0</span>
+  </a>
+
+  <a href="/account" title="My Account" aria-label="My Account">
+    <i class="bi bi-person-circle"></i>
+    <span>Account</span>
+  </a>
+</nav>
+
+  </div>
+</header>
+
+
+<main>
+
+  <section class="product-page">
+
+    <div class="store-container">
+
+      <div id="productLoading" class="product-page-loading">
+        Loading product...
+      </div>
+
+
+      <div id="productError" class="product-page-message hidden">
+
+        <div class="product-message-symbol">☾</div>
+
+        <h1>Product not found</h1>
+
+        <p>
+          This product may no longer be available.
+        </p>
+
+        <a href="/shop" class="store-button primary">
+          Back to Shop
+        </a>
+
+      </div>
+
+
+      <div id="productContent" class="product-detail hidden">
+
+        <!-- Product gallery -->
+        <section class="product-gallery">
+
+          <div
+            id="productMainImage"
+            class="product-main-image"
+          >
+          </div>
+
+
+          <div
+            id="productThumbnails"
+            class="product-thumbnails"
+          >
+          </div>
+
+        </section>
+
+
+        <!-- Product information -->
+        <section class="product-detail-info">
+
+          <p id="productSku" class="product-detail-sku">
+            PRODUCT
+          </p>
+
+          <h1 id="productName">
+            Product
+          </h1>
+
+
+          <div class="product-detail-price">
+            <span id="productPrice">NPR 0.00</span>
+          </div>
+
+
+          <div
+            id="productStock"
+            class="product-detail-stock"
+          >
+          </div>
+
+
+          <div class="product-description">
+
+            <h2>Description</h2>
+
+            <p id="productDescription">
+              No description available.
+            </p>
+
+          </div>
+
+
+          <div
+            id="purchaseArea"
+            class="purchase-area"
+          >
+
+            <div class="quantity-control">
+
+              <button
+                type="button"
+                id="quantityMinus"
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+
+              <input
+                id="quantityInput"
+                type="number"
+                min="1"
+                value="1"
+                inputmode="numeric"
+                aria-label="Quantity"
+              >
+
+              <button
+                type="button"
+                id="quantityPlus"
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
+
+            </div>
+
+
+            <button
+              type="button"
+              id="addToCart"
+              class="store-button primary add-cart-button"
+            >
+              Add to Cart
+            </button>
+
+          </div>
+
+
+          <div
+            id="cartMessage"
+            class="cart-message hidden"
+          >
+          </div>
+
+
+          <div class="product-meta">
+
+            <div>
+              <span>SKU</span>
+              <strong id="metaSku">—</strong>
+            </div>
+
+            <div>
+              <span>Category</span>
+              <strong id="metaCategory">—</strong>
+            </div>
+
+            <div>
+              <span>Brand</span>
+              <strong id="metaBrand">—</strong>
+            </div>
+
+          </div>
+
+        </section>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <section class="related-section">
+
+    <div class="store-container">
+
+      <div class="section-heading">
+
+        <div>
+          <p class="eyebrow">KEEP SHOPPING</p>
+          <h2>More Products</h2>
+        </div>
+
+        <a href="/shop" class="section-link">
+          View all →
+        </a>
+
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<footer class="store-footer">
+
+  <div class="store-container footer-inner">
+
+    <div>
+      <strong>THE BLUE MOON</strong>
+      <p>Your everyday store, now online.</p>
+    </div>
+
+    <div class="footer-links">
+      <a href="/shop">Shop</a>
+      <a href="/account">My Account</a>
+      <a href="/cart">Cart</a>
+    </div>
+
+  </div>
+
+</footer>
+
+
+<script>
+
+const API_BASE = "http://127.0.0.1:8001";
+
+
+const productLoading =
+  document.getElementById("productLoading");
+
+const productError =
+  document.getElementById("productError");
+
+const productContent =
+  document.getElementById("productContent");
+
+const productMainImage =
+  document.getElementById("productMainImage");
+
+const productThumbnails =
+  document.getElementById("productThumbnails");
+
+const productSku =
+  document.getElementById("productSku");
+
+const productName =
+  document.getElementById("productName");
+
+const productPrice =
+  document.getElementById("productPrice");
+
+const productStock =
+  document.getElementById("productStock");
+
+const productDescription =
+  document.getElementById("productDescription");
+
+const quantityInput =
+  document.getElementById("quantityInput");
+
+const quantityMinus =
+  document.getElementById("quantityMinus");
+
+const quantityPlus =
+  document.getElementById("quantityPlus");
+
+const addToCart =
+  document.getElementById("addToCart");
+
+const cartMessage =
+  document.getElementById("cartMessage");
+
+const metaSku =
+  document.getElementById("metaSku");
+
+const metaCategory =
+  document.getElementById("metaCategory");
+
+const metaBrand =
+  document.getElementById("metaBrand");
+
+const cartCount =
+  document.getElementById("cartCount");
+
+
+let currentProduct = null;
+let maxQuantity = 0;
+
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+
+function formatPrice(value) {
+
+  const number = Number(value || 0);
+
+  return `NPR ${number.toLocaleString("en-NP", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+
+}
+
+
+function getProductId() {
+
+  const params =
+    new URLSearchParams(window.location.search);
+
+  const id =
+    Number(params.get("id"));
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return null;
+  }
+
+  return id;
+
+}
+
+
+function showError() {
+
+  productLoading.classList.add("hidden");
+  productContent.classList.add("hidden");
+  productError.classList.remove("hidden");
+
+}
+
+
+function showProduct() {
+
+  productLoading.classList.add("hidden");
+  productError.classList.add("hidden");
+  productContent.classList.remove("hidden");
+
+}
+
+
+function renderGallery(product) {
+
+  const images =
+    Array.isArray(product.images)
+      ? product.images
+      : [];
+
+
+  if (!images.length) {
+
+    productMainImage.innerHTML = `
+      <div class="product-large-placeholder">
+        ☾
+      </div>
+    `;
+
+    productThumbnails.innerHTML = "";
+
+    return;
+
+  }
+
+
+  const sortedImages =
+    [...images].sort((a, b) => {
+
+      if (a.is_primary && !b.is_primary) {
+        return -1;
+      }
+
+      if (!a.is_primary && b.is_primary) {
+        return 1;
+      }
+
+      return Number(a.sort_order || 0)
+        - Number(b.sort_order || 0);
+
+    });
+
+
+  function selectImage(image) {
+
+    productMainImage.innerHTML = `
+      <img
+        src="${escapeHtml(image.image_url)}"
+        alt="${escapeHtml(product.name)}"
+      >
+    `;
+
+    document
+      .querySelectorAll(".product-thumbnail")
+      .forEach(button => {
+
+        button.classList.toggle(
+          "selected",
+          button.dataset.imageId === String(image.id)
+        );
+
+      });
+
+  }
+
+
+  productThumbnails.innerHTML =
+    sortedImages.map(image => `
+
+      <button
+        type="button"
+        class="product-thumbnail ${
+          image === sortedImages[0]
+            ? "selected"
+            : ""
+        }"
+        data-image-id="${image.id}"
+        aria-label="View product image"
+      >
+
+        <img
+          src="${escapeHtml(image.image_url)}"
+          alt="${escapeHtml(product.name)}"
+        >
+
+      </button>
+
+    `).join("");
+
+
+  productThumbnails
+    .querySelectorAll(".product-thumbnail")
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const image =
+            sortedImages.find(
+              item =>
+                String(item.id) ===
+                button.dataset.imageId
+            );
+
+          if (image) {
+            selectImage(image);
+          }
+
+        }
+      );
+
+    });
+
+
+  selectImage(sortedImages[0]);
+
+}
+
+
+function renderProduct(product) {
+
+  currentProduct = product;
+
+  maxQuantity =
+    Math.max(
+      0,
+      Number(product.stock_quantity || 0)
+    );
+
+
+  document.title =
+    `${product.name} — The Blue Moon`;
+
+
+  productSku.textContent =
+    product.sku || "PRODUCT";
+
+
+  productName.textContent =
+    product.name || "Product";
+
+
+  productPrice.textContent =
+    formatPrice(product.unit_price);
+
+
+  productDescription.textContent =
+    product.description ||
+    "No description available.";
+
+
+  metaSku.textContent =
+    product.sku || "—";
+
+
+  metaCategory.textContent =
+    product.category_id
+      ? `Category #${product.category_id}`
+      : "—";
+
+
+  metaBrand.textContent =
+    product.brand_id
+      ? `Brand #${product.brand_id}`
+      : "—";
+
+
+  if (maxQuantity > 0) {
+
+    productStock.textContent =
+      `${maxQuantity} available`;
+
+    productStock.className =
+      "product-detail-stock in-stock";
+
+    quantityInput.max =
+      String(maxQuantity);
+
+    quantityInput.value = "1";
+
+    addToCart.disabled = false;
+
+    quantityMinus.disabled = false;
+    quantityPlus.disabled = false;
+
+  } else {
+
+    productStock.textContent =
+      "Out of stock";
+
+    productStock.className =
+      "product-detail-stock out-of-stock";
+
+    quantityInput.value = "0";
+
+    quantityInput.max = "0";
+
+    addToCart.disabled = true;
+
+    quantityMinus.disabled = true;
+    quantityPlus.disabled = true;
+
+  }
+
+
+  renderGallery(product);
+  showProduct();
+
+}
+
+
+async function loadProduct() {
+
+  const productId =
+    getProductId();
+
+
+  if (!productId) {
+
+    showError();
+    return;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_BASE}/api/products/${productId}`
+      );
+
+
+    if (!response.ok) {
+
+      showError();
+      return;
+
+    }
+
+
+    const product =
+      await response.json();
+
+
+    renderProduct(product);
+
+  } catch (error) {
+
+    console.error(
+      "Product loading error:",
+      error
+    );
+
+    showError();
+
+  }
+
+}
+
+
+function getQuantity() {
+
+  let quantity =
+    Number(quantityInput.value);
+
+
+  if (!Number.isInteger(quantity)) {
+    quantity = 1;
+  }
+
+
+  quantity =
+    Math.max(
+      1,
+      Math.min(quantity, maxQuantity)
+    );
+
+
+  quantityInput.value =
+    String(quantity);
+
+
+  return quantity;
+
+}
+
+
+quantityMinus.addEventListener(
+  "click",
+  () => {
+
+    if (maxQuantity <= 0) {
+      return;
+    }
+
+    const current =
+      getQuantity();
+
+    quantityInput.value =
+      String(Math.max(1, current - 1));
+
+  }
+);
+
+
+quantityPlus.addEventListener(
+  "click",
+  () => {
+
+    if (maxQuantity <= 0) {
+      return;
+    }
+
+    const current =
+      getQuantity();
+
+    quantityInput.value =
+      String(
+        Math.min(
+          maxQuantity,
+          current + 1
+        )
+      );
+
+  }
+);
+
+
+quantityInput.addEventListener(
+  "change",
+  () => {
+
+    if (maxQuantity > 0) {
+      getQuantity();
+    }
+
+  }
+);
+
+
+function getCart() {
+
+  try {
+
+    const cart =
+      JSON.parse(
+        localStorage.getItem("blueMoonCart") || "[]"
+      );
+
+    return Array.isArray(cart)
+      ? cart
+      : [];
+
+  } catch {
+
+    return [];
+
+  }
+
+}
+
+
+function saveCart(cart) {
+
+  localStorage.setItem(
+    "blueMoonCart",
+    JSON.stringify(cart)
+  );
+
+}
+
+
+function updateCartCount() {
+
+  const cart =
+    getCart();
+
+
+  const count =
+    cart.reduce(
+      (total, item) =>
+        total + Number(item.quantity || 0),
+      0
+    );
+
+
+  cartCount.textContent =
+    String(count);
+
+}
+
+
+function showCartMessage(message) {
+
+  cartMessage.textContent =
+    message;
+
+  cartMessage.classList.remove(
+    "hidden"
+  );
+
+
+  window.setTimeout(
+    () => {
+
+      cartMessage.classList.add(
+        "hidden"
+      );
+
+    },
+    3000
+  );
+
+}
+
+
+addToCart.addEventListener(
+  "click",
+  () => {
+
+    if (!currentProduct || maxQuantity <= 0) {
+      return;
+    }
+
+
+    const quantity =
+      getQuantity();
+
+
+    if (
+      quantity < 1 ||
+      quantity > maxQuantity
+    ) {
+
+      showCartMessage(
+        "Please select a valid quantity."
+      );
+
+      return;
+
+    }
+
+
+    const cart =
+      getCart();
+
+
+    const existing =
+      cart.find(
+        item =>
+          Number(item.product_id) ===
+          Number(currentProduct.id)
+      );
+
+
+    if (existing) {
+
+      existing.quantity =
+        Math.min(
+          Number(existing.quantity || 0)
+            + quantity,
+          maxQuantity
+        );
+
+    } else {
+
+      cart.push({
+
+        product_id:
+          currentProduct.id,
+
+        name:
+          currentProduct.name,
+
+        sku:
+          currentProduct.sku,
+
+        unit_price:
+          Number(currentProduct.unit_price),
+
+        image_url:
+          currentProduct.images?.[0]?.image_url || null,
+
+        quantity:
+          quantity
+
+      });
+
+    }
+
+
+    saveCart(cart);
+
+    updateCartCount();
+
+
+    showCartMessage(
+      `${quantity} × ${currentProduct.name} added to your cart.`
+    );
+
+  }
+);
+
+
+updateCartCount();
+loadProduct();
+
+</script>
+
+
+<script>
+(function () {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  document.querySelectorAll(".store-nav > a").forEach(link => {
+    const href = link.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return;
+    }
+
+    const normalizedHref =
+      href.replace(/\/+$/, "") || "/";
+
+    const isActive =
+      normalizedHref === path ||
+      (
+        normalizedHref === "/shop" &&
+        (path === "/product" || path.startsWith("/product/"))
+      ) ||
+      (
+        normalizedHref === "/orders" &&
+        (path === "/order" || path.startsWith("/order/"))
+      ) ||
+      (
+        normalizedHref === "/account" &&
+        (
+          path === "/account" ||
+          path === "/checkout" ||
+          path === "/login" ||
+          path === "/register"
+        )
+      );
+
+    if (isActive) {
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+    }
+  });
+})();
+</script>
+
+<script src="/js/role-nav.js"></script>
+</body>
+</html>

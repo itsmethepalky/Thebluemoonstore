@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Your Cart — The Blue Moon</title>
+
+  <link rel="stylesheet" href="css/store.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+
+<body>
+
+<header class="store-header">
+  <div class="store-container nav-inner">
+
+    <a href="/" class="store-logo">
+      <span class="logo-main">THE BLUE MOON</span>
+      <span class="logo-sub">EVERYDAY ESSENTIALS</span>
+    </a>
+
+    <nav class="store-nav" aria-label="Main navigation">
+  <a href="/" title="Home" aria-label="Home">
+    <i class="bi bi-house-door"></i>
+    <span>Home</span>
+  </a>
+
+  <a href="/shop" title="Shop" aria-label="Shop">
+    <i class="bi bi-grid"></i>
+    <span>Shop</span>
+  </a>
+
+  <a href="/orders" title="My Orders" aria-label="My Orders">
+    <i class="bi bi-box-seam"></i>
+    <span>Orders</span>
+  </a>
+
+  <a href="/cart" class="cart-link" title="Cart" aria-label="Cart">
+    <i class="bi bi-cart3"></i>
+    <span>Cart</span>
+    <span class="cart-count" id="cartCount">0</span>
+  </a>
+
+  <a href="/account" title="My Account" aria-label="My Account">
+    <i class="bi bi-person-circle"></i>
+    <span>Account</span>
+  </a>
+</nav>
+
+  </div>
+</header>
+
+
+<main class="cart-page">
+
+  <div class="store-container">
+
+    <div class="section-heading cart-heading">
+      <div>
+        <p class="eyebrow">YOUR SELECTION</p>
+        <h1>Your Cart</h1>
+      </div>
+
+      <a href="/shop" class="section-link">
+        ← Continue Shopping
+      </a>
+    </div>
+
+
+    <div id="emptyCart" class="cart-empty hidden">
+
+      <div class="cart-empty-symbol">☾</div>
+
+      <h2>Your cart is empty</h2>
+
+      <p>
+        Discover something useful for your everyday needs.
+      </p>
+
+      <a href="/shop" class="store-button primary">
+        Start Shopping
+      </a>
+
+    </div>
+
+
+    <div id="cartContent" class="cart-layout hidden">
+
+      <section class="cart-items">
+
+        <div id="cartItems"></div>
+
+      </section>
+
+
+      <aside class="cart-summary">
+
+        <h2>Order Summary</h2>
+
+        <div class="summary-row">
+          <span>Items</span>
+          <strong id="summaryItems">0</strong>
+        </div>
+
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <strong id="summarySubtotal">NPR 0.00</strong>
+        </div>
+
+        <div class="summary-row">
+          <span>Delivery</span>
+          <strong id="summaryDelivery">Calculated at checkout</strong>
+        </div>
+
+        <div class="summary-divider"></div>
+
+        <div class="summary-total">
+          <span>Estimated Total</span>
+          <strong id="summaryTotal">NPR 0.00</strong>
+        </div>
+
+        <button
+          id="checkoutButton"
+          type="button"
+          class="store-button primary checkout-button"
+        >
+          Proceed to Checkout
+        </button>
+
+        <a
+          href="/shop"
+          class="store-button secondary continue-button"
+        >
+          Continue Shopping
+        </a>
+
+        <p class="checkout-note">
+          Final pricing and stock will be verified securely at checkout.
+        </p>
+
+      </aside>
+
+    </div>
+
+  </div>
+
+</main>
+
+
+<footer class="store-footer">
+
+  <div class="store-container footer-inner">
+
+    <div>
+      <strong>THE BLUE MOON</strong>
+      <p>Your everyday store, now online.</p>
+    </div>
+
+    <div class="footer-links">
+      <a href="/shop">Shop</a>
+      <a href="/account">My Account</a>
+      <a href="/cart">Cart</a>
+    </div>
+
+  </div>
+
+</footer>
+
+
+<script>
+
+const cartCount =
+  document.getElementById("cartCount");
+
+const emptyCart =
+  document.getElementById("emptyCart");
+
+const cartContent =
+  document.getElementById("cartContent");
+
+const cartItems =
+  document.getElementById("cartItems");
+
+const summaryItems =
+  document.getElementById("summaryItems");
+
+const summarySubtotal =
+  document.getElementById("summarySubtotal");
+
+const summaryTotal =
+  document.getElementById("summaryTotal");
+
+const checkoutButton =
+  document.getElementById("checkoutButton");
+
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+
+function formatPrice(value) {
+
+  return `NPR ${Number(value || 0).toLocaleString(
+    "en-NP",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }
+  )}`;
+
+}
+
+
+function getCart() {
+
+  try {
+
+    const cart =
+      JSON.parse(
+        localStorage.getItem("blueMoonCart") || "[]"
+      );
+
+    return Array.isArray(cart)
+      ? cart
+      : [];
+
+  } catch {
+
+    return [];
+
+  }
+
+}
+
+
+function saveCart(cart) {
+
+  localStorage.setItem(
+    "blueMoonCart",
+    JSON.stringify(cart)
+  );
+
+}
+
+
+function updateCartCount(cart) {
+
+  const count =
+    cart.reduce(
+      (total, item) =>
+        total + Number(item.quantity || 0),
+      0
+    );
+
+  cartCount.textContent =
+    String(count);
+
+}
+
+
+function renderCart() {
+
+  const cart =
+    getCart();
+
+
+  updateCartCount(cart);
+
+
+  if (!cart.length) {
+
+    cartContent.classList.add("hidden");
+    emptyCart.classList.remove("hidden");
+
+    return;
+
+  }
+
+
+  emptyCart.classList.add("hidden");
+  cartContent.classList.remove("hidden");
+
+
+  cartItems.innerHTML =
+    cart.map((item, index) => {
+
+      const quantity =
+        Number(item.quantity || 1);
+
+      const price =
+        Number(item.unit_price || 0);
+
+      const lineTotal =
+        price * quantity;
+
+
+      return `
+
+        <article
+          class="cart-item"
+          data-index="${index}"
+        >
+
+          <a
+            href="/product?id=${encodeURIComponent(item.product_id)}"
+            class="cart-item-image"
+          >
+
+            ${
+              item.image_url
+                ? `
+                  <img
+                    src="${escapeHtml(item.image_url)}"
+                    alt="${escapeHtml(item.name)}"
+                  >
+                `
+                : `
+                  <span>☾</span>
+                `
+            }
+
+          </a>
+
+
+          <div class="cart-item-details">
+
+            <p class="cart-item-sku">
+              ${escapeHtml(item.sku || "PRODUCT")}
+            </p>
+
+            <a
+              href="/product?id=${encodeURIComponent(item.product_id)}"
+              class="cart-item-name"
+            >
+              ${escapeHtml(item.name || "Product")}
+            </a>
+
+            <p class="cart-item-price">
+              ${formatPrice(price)} each
+            </p>
+
+
+            <div class="cart-item-actions">
+
+              <div class="cart-quantity">
+
+                <button
+                  type="button"
+                  data-action="decrease"
+                  data-index="${index}"
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+
+                <span>
+                  ${quantity}
+                </span>
+
+                <button
+                  type="button"
+                  data-action="increase"
+                  data-index="${index}"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+
+              </div>
+
+
+              <button
+                type="button"
+                class="remove-item"
+                data-action="remove"
+                data-index="${index}"
+              >
+                Remove
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <div class="cart-item-total">
+
+            <strong>
+              ${formatPrice(lineTotal)}
+            </strong>
+
+          </div>
+
+        </article>
+
+      `;
+
+    }).join("");
+
+
+  const totalItems =
+    cart.reduce(
+      (total, item) =>
+        total + Number(item.quantity || 0),
+      0
+    );
+
+
+  const subtotal =
+    cart.reduce(
+      (total, item) =>
+        total +
+        Number(item.unit_price || 0) *
+        Number(item.quantity || 0),
+      0
+    );
+
+
+  summaryItems.textContent =
+    String(totalItems);
+
+  summarySubtotal.textContent =
+    formatPrice(subtotal);
+
+  summaryTotal.textContent =
+    formatPrice(subtotal);
+
+}
+
+
+cartItems.addEventListener(
+  "click",
+  event => {
+
+    const button =
+      event.target.closest("[data-action]");
+
+
+    if (!button) {
+      return;
+    }
+
+
+    const index =
+      Number(button.dataset.index);
+
+
+    const action =
+      button.dataset.action;
+
+
+    const cart =
+      getCart();
+
+
+    if (!cart[index]) {
+      return;
+    }
+
+
+    if (action === "increase") {
+
+      cart[index].quantity =
+        Number(cart[index].quantity || 0) + 1;
+
+    }
+
+
+    if (action === "decrease") {
+
+      const quantity =
+        Number(cart[index].quantity || 0) - 1;
+
+
+      if (quantity <= 0) {
+
+        cart.splice(index, 1);
+
+      } else {
+
+        cart[index].quantity =
+          quantity;
+
+      }
+
+    }
+
+
+    if (action === "remove") {
+
+      cart.splice(index, 1);
+
+    }
+
+
+    saveCart(cart);
+    renderCart();
+
+  }
+);
+
+
+checkoutButton.addEventListener(
+  "click",
+  () => {
+
+    if (!getCart().length) {
+      return;
+    }
+
+    window.location.href =
+      "/checkout";
+
+  }
+);
+
+
+renderCart();
+
+</script>
+
+
+<script>
+(function () {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  document.querySelectorAll(".store-nav > a").forEach(link => {
+    const href = link.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return;
+    }
+
+    const normalizedHref =
+      href.replace(/\/+$/, "") || "/";
+
+    const isActive =
+      normalizedHref === path ||
+      (
+        normalizedHref === "/shop" &&
+        (path === "/product" || path.startsWith("/product/"))
+      ) ||
+      (
+        normalizedHref === "/orders" &&
+        (path === "/order" || path.startsWith("/order/"))
+      ) ||
+      (
+        normalizedHref === "/account" &&
+        (
+          path === "/account" ||
+          path === "/checkout" ||
+          path === "/login" ||
+          path === "/register"
+        )
+      );
+
+    if (isActive) {
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+    }
+  });
+})();
+</script>
+
+<script src="/js/role-nav.js"></script>
+</body>
+</html>

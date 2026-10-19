@@ -1,0 +1,360 @@
+[
+  {
+    "file": "backend/app/__init__.py",
+    "routes": []
+  },
+  {
+    "file": "backend/app/config.py",
+    "routes": []
+  },
+  {
+    "file": "backend/app/supabase.py",
+    "routes": []
+  },
+  {
+    "file": "backend/app/main.py",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "function": "health",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/api/auth/me",
+        "function": "auth_me",
+        "dependencies": [
+          "Depends(get_current_user)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/api/account/me",
+        "function": "account_me",
+        "dependencies": [
+          "Depends(get_current_customer)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/api/account/orders",
+        "function": "account_orders",
+        "dependencies": [
+          "Depends(get_current_customer)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/api/account/orders/{order_id}",
+        "function": "account_order",
+        "dependencies": [
+          "Depends(get_current_customer)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "function": "frontend_home",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/admin/orders",
+        "function": "admin_orders_page",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/admin/order",
+        "function": "admin_order_page",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/admin/products",
+        "function": "admin_products_page",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/admin/account",
+        "function": "admin_account_page",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/admin/customers",
+        "function": "admin_customers_page",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/admin",
+        "function": "admin_page",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/shop",
+        "function": "frontend_shop",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/product",
+        "function": "frontend_product",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/cart",
+        "function": "frontend_cart",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/checkout",
+        "function": "frontend_checkout",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/login",
+        "function": "frontend_login",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/register",
+        "function": "frontend_register",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/account",
+        "function": "frontend_account",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/orders",
+        "function": "frontend_orders",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/order",
+        "function": "frontend_order",
+        "dependencies": []
+      }
+    ]
+  },
+  {
+    "file": "backend/app/auth.py",
+    "routes": []
+  },
+  {
+    "file": "backend/app/supabase_retry.py",
+    "routes": []
+  },
+  {
+    "file": "backend/app/routers/__init__.py",
+    "routes": []
+  },
+  {
+    "file": "backend/app/routers/catalog.py",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/categories",
+        "function": "list_categories",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/brands",
+        "function": "list_brands",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/products",
+        "function": "list_products",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/products/{product_id}",
+        "function": "get_product",
+        "dependencies": []
+      }
+    ]
+  },
+  {
+    "file": "backend/app/routers/checkout.py",
+    "routes": [
+      {
+        "method": "POST",
+        "path": "/preview",
+        "function": "preview_checkout",
+        "dependencies": [
+          "Depends(get_current_customer)"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/create",
+        "function": "create_checkout_order",
+        "dependencies": [
+          "Depends(get_current_customer)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/esewa/success",
+        "function": "esewa_success",
+        "dependencies": []
+      },
+      {
+        "method": "GET",
+        "path": "/esewa/failure",
+        "function": "esewa_failure",
+        "dependencies": []
+      }
+    ]
+  },
+  {
+    "file": "backend/app/routers/admin.py",
+    "routes": [
+      {
+        "method": "GET",
+        "path": "/dashboard",
+        "function": "dashboard",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/orders",
+        "function": "list_orders",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/orders/{order_id}",
+        "function": "get_order",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/orders/{order_id}/status",
+        "function": "update_order_status",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/orders/{order_id}/payment-status",
+        "function": "update_payment_status",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/products",
+        "function": "admin_products",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/products",
+        "function": "create_product",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/products/{product_id}",
+        "function": "update_product",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/products/{product_id}/stock",
+        "function": "adjust_product_stock",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/customers",
+        "function": "admin_customers",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/promotions",
+        "function": "admin_promotions",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "POST",
+        "path": "/promotions",
+        "function": "create_promotion",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/promotions/{promotion_id}",
+        "function": "update_promotion",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "DELETE",
+        "path": "/promotions/{promotion_id}",
+        "function": "delete_promotion",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/store-settings",
+        "function": "get_store_settings",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      },
+      {
+        "method": "PATCH",
+        "path": "/store-settings/delivery-charge",
+        "function": "update_delivery_charge",
+        "dependencies": [
+          "Depends(get_admin_user)"
+        ]
+      }
+    ]
+  }
+]

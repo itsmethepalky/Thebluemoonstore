@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order — Admin | The Blue Moon</title>
+  <link rel="stylesheet" href="/css/store.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="store-body">
+
+<header class="store-header">
+  <div class="store-header-inner">
+    <a href="/admin" class="brand blue-moon-admin-brand" aria-label="The Blue Moon Admin">
+      <span class="brand-mark moon-brand-mark">☾</span>
+      <span>
+        <strong>THE BLUE MOON</strong>
+        <small>ADMIN</small>
+      </span>
+    </a>
+
+    <nav class="store-nav admin-nav" aria-label="Admin navigation">
+      <a href="/admin" title="Dashboard" aria-label="Dashboard">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="/shop" title="Store" aria-label="Store">
+        <i class="bi bi-shop"></i>
+        <span>Store</span>
+      </a>
+
+      <a href="/admin/orders" title="Orders" aria-label="Orders">
+        <i class="bi bi-box-seam"></i>
+        <span>Orders</span>
+      </a>
+
+      <a href="/admin/products" title="Products" aria-label="Products">
+        <i class="bi bi-boxes"></i>
+        <span>Products</span>
+      </a>
+
+      <a href="/admin/customers" title="Customers" aria-label="Customers">
+        <i class="bi bi-people"></i>
+        <span>Customers</span>
+      </a>
+
+      <a href="/admin/account" title="Admin Account" aria-label="Admin Account">
+        <i class="bi bi-person-circle"></i>
+        <span>Account</span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main class="store-container admin-container">
+
+  <a href="/admin/orders" class="back-link">
+    <i class="bi bi-arrow-left"></i>
+    Orders
+  </a>
+
+  <div id="adminError" class="notice error hidden"></div>
+
+  <div id="loading" class="loading-state">
+    Loading order...
+  </div>
+
+  <div id="orderContent" class="hidden">
+
+    <div class="page-heading">
+      <div>
+        <span class="eyebrow">Order</span>
+        <h1 id="orderNo">—</h1>
+        <p id="orderDate">—</p>
+      </div>
+
+      <span id="orderStatusBadge" class="status-badge">
+        —
+      </span>
+    </div>
+
+    <section class="admin-detail-grid">
+
+      <div class="admin-panel">
+        <div class="admin-panel-heading">
+          <div>
+            <span class="eyebrow">Order Status</span>
+            <h2>Fulfilment</h2>
+          </div>
+        </div>
+
+        <label class="admin-field">
+          <span>Order status</span>
+          <select id="orderStatus">
+            <option value="pending">Pending</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="processing">Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </label>
+
+        <button class="button primary full-width" id="saveOrderStatus">
+          <i class="bi bi-check2"></i>
+          Update Order Status
+        </button>
+      </div>
+
+      <div class="admin-panel">
+        <div class="admin-panel-heading">
+          <div>
+            <span class="eyebrow">Payment</span>
+            <h2>Payment Status</h2>
+          </div>
+        </div>
+
+        <div class="payment-method-box">
+          <span>Method</span>
+          <strong id="paymentMethod">—</strong>
+        </div>
+
+        <label class="admin-field">
+          <span>Payment status</span>
+          <select id="paymentStatus">
+            <option value="unpaid">Unpaid</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid</option>
+          </select>
+        </label>
+
+        <label class="admin-field" style="margin-top: 14px;">
+          <span>Amount paid</span>
+          <input
+            type="number"
+            id="amountPaid"
+            min="0"
+            step="0.01"
+            inputmode="decimal"
+            placeholder="0.00"
+          >
+        </label>
+
+        <button class="button primary full-width" id="savePaymentStatus">
+          <i class="bi bi-credit-card"></i>
+          Update Payment
+        </button>
+      </div>
+
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-panel-heading">
+        <div>
+          <span class="eyebrow">Customer</span>
+          <h2>Customer Information</h2>
+        </div>
+      </div>
+
+      <div class="customer-detail-grid">
+        <div>
+          <span>Name</span>
+          <strong id="customerName">—</strong>
+        </div>
+        <div>
+          <span>Email</span>
+          <strong id="customerEmail">—</strong>
+        </div>
+        <div>
+          <span>Phone</span>
+          <strong id="customerPhone">—</strong>
+        </div>
+        <div>
+          <span>Address</span>
+          <strong id="shippingAddress">—</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-panel">
+      <div class="admin-panel-heading">
+        <div>
+          <span class="eyebrow">Items</span>
+          <h2>Order Items</h2>
+        </div>
+      </div>
+
+      <div id="orderItems" class="admin-items"></div>
+
+      <div class="admin-total-box">
+        <div>
+          <span>Subtotal</span>
+          <strong id="subtotal">—</strong>
+        </div>
+
+        <div>
+          <span>Discount</span>
+          <strong id="discount">—</strong>
+        </div>
+
+        <div>
+          <span>Tax</span>
+          <strong id="tax">—</strong>
+        </div>
+
+        <div class="grand-total">
+          <span>Total</span>
+          <strong id="total">—</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="admin-panel" id="notesPanel">
+      <div class="admin-panel-heading">
+        <div>
+          <span class="eyebrow">Customer message</span>
+          <h2>Notes</h2>
+        </div>
+      </div>
+
+      <p id="orderNotes" class="order-notes"></p>
+    </section>
+
+  </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase.js"></script>
+  <script src="/js/auth-guard.js"></script>
+<script src="/js/admin-auth.js"></script>
+
+<script>
+const orderId =
+  new URLSearchParams(window.location.search).get("id");
+
+let orderData = null;
+
+async function api(url, options = {}) {
+  const response = await window.adminFetch(url, options);
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(body.detail || "Request failed");
+  }
+
+  return body;
+}
+function money(value) {
+  return "Rs. " + Number(value || 0).toLocaleString("en-NP", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function showError(message) {
+  const box = document.getElementById("adminError");
+  box.textContent = message;
+  box.classList.remove("hidden");
+}
+
+async function loadOrder() {
+  if (!orderId) {
+    showError("No order ID was supplied.");
+    document.getElementById("loading").classList.add("hidden");
+    return;
+  }
+
+  try {
+    orderData = await api(
+      "/api/admin/orders/" + encodeURIComponent(orderId)
+    );
+
+    const order = orderData.order;
+    const customer = orderData.customer || {};
+
+    document.getElementById("orderNo").textContent =
+      order.order_no;
+
+    document.getElementById("orderDate").textContent =
+      new Date(order.created_at).toLocaleString();
+
+    const badge = document.getElementById("orderStatusBadge");
+    badge.textContent = order.status;
+    badge.className =
+      "status-badge status-" +
+      String(order.status).replaceAll("_", "-");
+
+    const statusSelect = document.getElementById("orderStatus");
+
+    const statusFlow = {
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["processing", "cancelled"],
+      processing: ["shipped", "cancelled"],
+      shipped: ["delivered", "cancelled"],
+      delivered: [],
+      cancelled: []
+    };
+
+    const allowedStatuses = statusFlow[order.status] || [];
+
+    statusSelect.innerHTML = "";
+
+    if (!allowedStatuses.length) {
+      const option = document.createElement("option");
+      option.value = order.status;
+      option.textContent =
+        order.status.charAt(0).toUpperCase() +
+        order.status.slice(1);
+      statusSelect.appendChild(option);
+      statusSelect.disabled = true;
+    } else {
+      allowedStatuses.forEach(status => {
+        const option = document.createElement("option");
+        option.value = status;
+        option.textContent =
+          status.charAt(0).toUpperCase() +
+          status.slice(1);
+        statusSelect.appendChild(option);
+      });
+
+      statusSelect.disabled = false;
+    }
+
+    const paymentStatusSelect =
+      document.getElementById("paymentStatus");
+
+    const amountPaidInput =
+      document.getElementById("amountPaid");
+
+    paymentStatusSelect.value =
+      order.payment_status;
+
+    amountPaidInput.value =
+      Number(order.amount_paid || 0).toFixed(2);
+
+    const paymentLocked =
+      order.status === "cancelled" ||
+      order.payment_status === "paid";
+
+    paymentStatusSelect.disabled = paymentLocked;
+    amountPaidInput.disabled = paymentLocked;
+
+    const savePaymentButton =
+      document.getElementById("savePaymentStatus");
+
+    savePaymentButton.disabled =
+      order.status === "cancelled";
+
+    const existingPaymentLockNotice =
+      document.getElementById("paymentLockedNotice");
+
+    if (existingPaymentLockNotice) {
+      existingPaymentLockNotice.remove();
+    }
+
+    if (order.status === "cancelled") {
+      const notice = document.createElement("div");
+      notice.id = "paymentLockedNotice";
+      notice.className = "admin-notice";
+      notice.style.marginTop = "14px";
+      notice.innerHTML =
+        '<i class="bi bi-lock-fill"></i> ' +
+        'Payment status is locked because this order is cancelled.';
+
+      savePaymentButton.parentNode.insertBefore(
+        notice,
+        savePaymentButton
+      );
+    }
+
+    document.getElementById("paymentMethod").textContent =
+      String(order.payment_method || "").toUpperCase();
+
+    document.getElementById("customerName").textContent =
+      customer.name || "—";
+
+    document.getElementById("customerEmail").textContent =
+      customer.email || "—";
+
+    document.getElementById("customerPhone").textContent =
+      order.phone || customer.phone || "—";
+
+    document.getElementById("shippingAddress").textContent =
+      order.shipping_address || customer.address || "—";
+
+    document.getElementById("subtotal").textContent =
+      money(order.subtotal);
+
+    document.getElementById("discount").textContent =
+      money(order.discount);
+
+    document.getElementById("tax").textContent =
+      money(order.tax);
+
+    document.getElementById("total").textContent =
+      money(order.total_amount);
+
+    const notesPanel = document.getElementById("notesPanel");
+
+    if (order.notes) {
+      document.getElementById("orderNotes").textContent =
+        order.notes;
+    } else {
+      notesPanel.classList.add("hidden");
+    }
+
+    const items = document.getElementById("orderItems");
+
+    if (!orderData.items.length) {
+      items.innerHTML =
+        '<div class="empty-state">No items found.</div>';
+    } else {
+      items.innerHTML = orderData.items.map(item => {
+        const product = item.product || {};
+
+        return `
+          <div class="admin-item-row">
+            <div class="admin-item-image">
+              ${
+                product.image_url
+                ? `<img src="${escapeHtml(product.image_url)}"
+                         alt="${escapeHtml(product.name || "")}">`
+                : `<i class="bi bi-box-seam"></i>`
+              }
+            </div>
+
+            <div class="admin-item-info">
+              <strong>${escapeHtml(product.name || "Product")}</strong>
+              <small>
+                SKU: ${escapeHtml(product.sku || "—")}
+              </small>
+            </div>
+
+            <div class="admin-item-qty">
+              × ${item.quantity}
+            </div>
+
+            <div class="admin-item-price">
+              ${money(item.subtotal)}
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    document.getElementById("loading").classList.add("hidden");
+    document.getElementById("orderContent").classList.remove("hidden");
+
+  } catch (error) {
+    document.getElementById("loading").classList.add("hidden");
+    showError(error.message);
+  }
+}
+
+async function saveOrderStatus() {
+  const status =
+    document.getElementById("orderStatus").value;
+
+  const button =
+    document.getElementById("saveOrderStatus");
+
+  button.disabled = true;
+
+  try {
+    const updated = await api(
+      "/api/admin/orders/" + orderId + "/status",
+      {
+        method: "PATCH",
+        body: JSON.stringify({ status })
+      }
+    );
+
+    if (orderData && orderData.order) {
+      orderData.order.status =
+        updated.status || status;
+    }
+
+    const badge =
+      document.getElementById("orderStatusBadge");
+
+    badge.textContent =
+      updated.status || status;
+
+    badge.className =
+      "status-badge status-" +
+      String(updated.status || status)
+        .replaceAll("_", "-");
+
+    await loadOrder();
+
+    button.innerHTML =
+      '<i class="bi bi-check-circle"></i> Updated';
+
+  } catch (error) {
+    showError(error.message);
+
+  } finally {
+    setTimeout(() => {
+      button.disabled = false;
+      button.innerHTML =
+        '<i class="bi bi-check2"></i> Update Order Status';
+    }, 1200);
+  }
+}
+
+async function savePaymentStatus() {
+  if (orderData?.order?.status === "cancelled") {
+    showError(
+      "Payment status is locked because this order is cancelled."
+    );
+    return;
+  }
+
+  const payment_status =
+    document.getElementById("paymentStatus").value;
+
+  const amountInput =
+    document.getElementById("amountPaid");
+
+  const amount_paid =
+    Number(amountInput.value || 0);
+
+  const button =
+    document.getElementById("savePaymentStatus");
+
+  const total =
+    Number(orderData?.order?.total_amount || 0);
+
+  if (!Number.isFinite(amount_paid) || amount_paid < 0) {
+    showError("Amount paid must be 0 or greater.");
+    return;
+  }
+
+  if (amount_paid > total) {
+    showError(
+      "Amount paid cannot exceed the order total."
+    );
+    return;
+  }
+
+  if (
+    payment_status === "paid" &&
+    amount_paid !== total
+  ) {
+    showError(
+      "Paid status requires the full order amount."
+    );
+    return;
+  }
+
+  if (
+    payment_status === "unpaid" &&
+    amount_paid !== 0
+  ) {
+    showError(
+      "Unpaid status requires amount paid to be 0."
+    );
+    return;
+  }
+
+  if (
+    payment_status === "partial" &&
+    (amount_paid <= 0 || amount_paid >= total)
+  ) {
+    showError(
+      "Partial payment must be greater than 0 and less than the order total."
+    );
+    return;
+  }
+
+  button.disabled = true;
+
+  try {
+    const updated = await api(
+      "/api/admin/orders/" + orderId + "/payment-status",
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          payment_status,
+          amount_paid
+        })
+      }
+    );
+
+    if (orderData && orderData.order) {
+      orderData.order.payment_status =
+        updated.payment_status || payment_status;
+
+      orderData.order.amount_paid =
+        updated.amount_paid !== undefined
+          ? updated.amount_paid
+          : amount_paid;
+    }
+
+    await loadOrder();
+
+    button.innerHTML =
+      '<i class="bi bi-check-circle"></i> Updated';
+
+  } catch (error) {
+    showError(error.message);
+
+  } finally {
+    setTimeout(() => {
+      button.disabled = false;
+      button.innerHTML =
+        '<i class="bi bi-credit-card"></i> Update Payment';
+    }, 1200);
+  }
+}
+
+document.getElementById("saveOrderStatus")
+  .addEventListener("click", saveOrderStatus);
+
+document.getElementById("savePaymentStatus")
+  .addEventListener("click", savePaymentStatus);
+
+document.getElementById("paymentStatus")
+  .addEventListener("change", function () {
+    const amountInput =
+      document.getElementById("amountPaid");
+
+    const total =
+      Number(orderData?.order?.total_amount || 0);
+
+    if (this.value === "paid") {
+      amountInput.value = total.toFixed(2);
+      this.disabled = true;
+      amountInput.disabled = true;
+    } else if (this.value === "unpaid") {
+      amountInput.value = "0.00";
+      amountInput.disabled = false;
+    } else if (this.value === "partial") {
+      amountInput.disabled = false;
+    }
+  });
+
+loadOrder();
+</script>
+
+<script src="/js/role-nav.js"></script>
+</body>
+</html>

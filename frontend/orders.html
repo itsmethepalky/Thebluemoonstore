@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Orders — The Blue Moon Store</title>
+
+  <link rel="stylesheet" href="css/store.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+
+<body>
+
+<header class="store-header">
+  <div class="container store-header-inner">
+    <a href="/" class="brand">The Blue Moon</a>
+
+    <nav class="store-nav" aria-label="Main navigation">
+  <a href="/" title="Home" aria-label="Home">
+    <i class="bi bi-house-door"></i>
+    <span>Home</span>
+  </a>
+
+  <a href="/shop" title="Shop" aria-label="Shop">
+    <i class="bi bi-grid"></i>
+    <span>Shop</span>
+  </a>
+
+  <a href="/orders" title="My Orders" aria-label="My Orders">
+    <i class="bi bi-box-seam"></i>
+    <span>Orders</span>
+  </a>
+
+  <a href="/cart" class="cart-link" title="Cart" aria-label="Cart">
+    <i class="bi bi-cart3"></i>
+    <span>Cart</span>
+    <span class="cart-count" id="cartCount">0</span>
+  </a>
+
+  <a href="/account" title="My Account" aria-label="My Account">
+    <i class="bi bi-person-circle"></i>
+    <span>Account</span>
+  </a>
+</nav>
+  </div>
+</header>
+
+<main class="container account-page">
+
+  <div class="page-heading">
+    <p class="eyebrow">Account</p>
+    <h1>My Orders</h1>
+    <p>View your recent orders and their current status.</p>
+  </div>
+
+  <div id="ordersMessage" class="form-message hidden"></div>
+
+  <div id="ordersLoading" class="account-card">
+    Loading your orders...
+  </div>
+
+  <div id="ordersEmpty" class="account-card hidden">
+    <h2>No orders yet</h2>
+    <p>You haven't placed an order yet.</p>
+    <a href="/shop" class="btn btn-primary">Start Shopping</a>
+  </div>
+
+  <div id="ordersList" class="orders-list hidden"></div>
+
+</main>
+
+<script>
+const API_BASE = "";
+
+const statusLabels = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  processing: "Processing",
+  ready: "Ready",
+  out_for_delivery: "Out for Delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  returned: "Returned"
+};
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatMoney(value) {
+  return `NPR ${Number(value || 0).toFixed(2)}`;
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  return new Date(value).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+function statusClass(status) {
+  return String(status || "")
+    .toLowerCase()
+    .replaceAll("_", "-");
+}
+
+function renderOrders(orders) {
+  const list = document.getElementById("ordersList");
+
+  list.innerHTML = orders.map(order => {
+    const itemCount = (order.order_items || []).reduce(
+      (total, item) => total + Number(item.quantity || 0),
+      0
+    );
+
+    return `
+      <article class="account-card order-card">
+        <div class="order-card-top">
+          <div>
+            <p class="eyebrow">Order</p>
+            <h2>${escapeHtml(order.order_no)}</h2>
+          </div>
+
+          <span class="order-status ${statusClass(order.status)}">
+            ${escapeHtml(statusLabels[order.status] || order.status)}
+          </span>
+        </div>
+
+        <div class="order-card-meta">
+          <div>
+            <span>Date</span>
+            <strong>${escapeHtml(formatDate(order.created_at))}</strong>
+          </div>
+
+          <div>
+            <span>Items</span>
+            <strong>${itemCount}</strong>
+          </div>
+
+          <div>
+            <span>Payment</span>
+            <strong>${escapeHtml(order.payment_method)}</strong>
+          </div>
+
+          <div>
+            <span>Total</span>
+            <strong>${formatMoney(order.total_amount)}</strong>
+          </div>
+        </div>
+
+        <div class="order-card-actions">
+          <a
+            href="/order?id=${encodeURIComponent(order.id)}"
+            class="btn btn-secondary"
+          >
+            View Order
+          </a>
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  list.classList.remove("hidden");
+}
+
+async function loadOrders() {
+  const loading = document.getElementById("ordersLoading");
+  const empty = document.getElementById("ordersEmpty");
+  const message = document.getElementById("ordersMessage");
+
+  try {
+    const { data: sessionData } =
+      await window.supabaseClient.auth.getSession();
+
+    const session = sessionData?.session;
+
+    if (!session) {
+      window.location.href =
+        `/login?redirect=${encodeURIComponent("/orders")}`;
+      return;
+    }
+
+    const response = await fetch(
+      `${API_BASE}/api/account/orders`,
+      {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      }
+    );
+
+    if (response.status === 401) {
+      window.location.href =
+        `/login?redirect=${encodeURIComponent("/orders")}`;
+      return;
+    }
+
+    if (response.status === 403) {
+      throw new Error("This account is not a Store customer account.");
+    }
+
+    if (!response.ok) {
+      throw new Error("Unable to load your orders.");
+    }
+
+    const orders = await response.json();
+
+    loading.classList.add("hidden");
+
+    if (!orders.length) {
+      empty.classList.remove("hidden");
+      return;
+    }
+
+    renderOrders(orders);
+
+  } catch (error) {
+    loading.classList.add("hidden");
+    message.textContent = error.message || "Unable to load orders.";
+    message.className = "form-message error";
+  }
+}
+
+loadOrders();
+</script>
+
+
+<script>
+(function () {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  document.querySelectorAll(".store-nav > a").forEach(link => {
+    const href = link.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return;
+    }
+
+    const normalizedHref =
+      href.replace(/\/+$/, "") || "/";
+
+    const isActive =
+      normalizedHref === path ||
+      (
+        normalizedHref === "/shop" &&
+        (path === "/product" || path.startsWith("/product/"))
+      ) ||
+      (
+        normalizedHref === "/orders" &&
+        (path === "/order" || path.startsWith("/order/"))
+      ) ||
+      (
+        normalizedHref === "/account" &&
+        (
+          path === "/account" ||
+          path === "/checkout" ||
+          path === "/login" ||
+          path === "/register"
+        )
+      );
+
+    if (isActive) {
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+    }
+  });
+})();
+</script>
+
+<script src="/js/role-nav.js"></script>
+</body>
+</html>

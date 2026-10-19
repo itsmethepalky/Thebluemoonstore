@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Create Account — The Blue Moon</title>
+
+  <link rel="stylesheet" href="css/store.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+    async
+    defer>
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+
+<body>
+
+  <main class="auth-page">
+    <section class="auth-card">
+
+      <div class="brand">
+        <div class="brand-mark">☾</div>
+
+        <div>
+          <h1>The Blue Moon</h1>
+          <p>Shop simply. Shop comfortably.</p>
+        </div>
+      </div>
+
+      <div class="auth-content">
+
+        <h2>Create your account</h2>
+
+        <p class="muted">
+          Create an account to shop and track your orders.
+        </p>
+
+        <form id="registerForm">
+
+          <label for="name">Full name</label>
+
+          <input
+            id="name"
+            type="text"
+            autocomplete="name"
+            maxlength="120"
+            required
+          >
+
+          <label for="phone">Phone</label>
+
+          <input
+            id="phone"
+            type="tel"
+            autocomplete="tel"
+            maxlength="30"
+            required
+          >
+
+          <label for="email">Email</label>
+
+          <input
+            id="email"
+            type="email"
+            autocomplete="email"
+            required
+          >
+
+          <label for="password">Password</label>
+
+          <input
+            id="password"
+            type="password"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          >
+
+          <label for="confirmPassword">
+            Confirm password
+          </label>
+
+          <input
+            id="confirmPassword"
+            type="password"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          >
+
+          <div
+            id="registerTurnstile"
+            class="cf-turnstile"
+            data-sitekey="0x4AAAAAAE98GcL_wHI3Vamr">
+          </div>
+
+          <button
+            type="submit"
+            id="registerButton">
+            Create account
+          </button>
+
+        </form>
+
+        <div id="message" class="message hidden"></div>
+
+        <p class="auth-switch">
+          Already have an account?
+          <a
+              id="signInLink"
+              href="/login"
+            >Sign in</a>
+        </p>
+
+      </div>
+
+    </section>
+  </main>
+
+  <script src="js/supabase.js"></script>
+
+  <script>
+    const form =
+      document.getElementById("registerForm");
+
+    const button =
+      document.getElementById("registerButton");
+
+    const message =
+      document.getElementById("message");
+
+    let turnstileWidgetId = null;
+
+    function showMessage(text, error = false) {
+
+      message.textContent = text;
+
+      message.classList.remove(
+        "hidden",
+        "error",
+        "success"
+      );
+
+      message.classList.add(
+        error ? "error" : "success"
+      );
+    }
+
+    function waitForTurnstile() {
+
+      return new Promise((resolve) => {
+
+        if (
+          window.turnstile &&
+          typeof window.turnstile.render === "function"
+        ) {
+          resolve(true);
+          return;
+        }
+
+        const interval = setInterval(() => {
+
+          if (
+            window.turnstile &&
+            typeof window.turnstile.render === "function"
+          ) {
+            clearInterval(interval);
+            resolve(true);
+          }
+
+        }, 100);
+
+        setTimeout(() => {
+          clearInterval(interval);
+          resolve(false);
+        }, 10000);
+      });
+    }
+
+    async function initializeTurnstile() {
+
+      const ready = await waitForTurnstile();
+
+      if (!ready) {
+        showMessage(
+          "Security verification could not load. Please refresh the page.",
+          true
+        );
+        return;
+      }
+
+      const container =
+        document.getElementById("registerTurnstile");
+
+      if (!container) return;
+
+      turnstileWidgetId =
+        window.turnstile.render(container, {
+          sitekey: container.dataset.sitekey
+        });
+    }
+
+    initializeTurnstile();
+
+    form.addEventListener("submit", async (event) => {
+
+      event.preventDefault();
+
+      if (turnstileWidgetId === null) {
+        showMessage(
+          "Please wait for the security check to load.",
+          true
+        );
+        return;
+      }
+
+      const captchaToken =
+        window.turnstile.getResponse(
+          turnstileWidgetId
+        );
+
+      if (!captchaToken) {
+        showMessage(
+          "Please complete the security check.",
+          true
+        );
+        return;
+      }
+
+      const name =
+        document.getElementById("name").value.trim();
+
+      const phone =
+        document.getElementById("phone").value.trim();
+
+      const email =
+        document.getElementById("email").value.trim();
+
+      const password =
+        document.getElementById("password").value;
+
+      const confirmPassword =
+        document.getElementById(
+          "confirmPassword"
+        ).value;
+
+      if (password !== confirmPassword) {
+
+        showMessage(
+          "Passwords do not match.",
+          true
+        );
+
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = "Creating account...";
+      message.classList.add("hidden");
+
+      try {
+
+        const { data, error } =
+          await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: {
+              captchaToken,
+
+              data: {
+                full_name: name,
+                phone: phone,
+                role: "customer"
+              }
+            }
+          });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.session) {
+
+          showMessage(
+            "Account created successfully."
+          );
+
+          setTimeout(() => {
+            const redirect = new URLSearchParams(
+              window.location.search
+            ).get("redirect");
+
+            if (
+              redirect &&
+              redirect.startsWith("/") &&
+              !redirect.startsWith("//")
+            ) {
+              window.location.href = redirect;
+            } else {
+              window.location.href = "/";
+            }
+          }, 700);
+
+        } else {
+
+          showMessage(
+            "Account created. Please check your email to confirm your account."
+          );
+        }
+
+      } catch (error) {
+
+        showMessage(
+          error.message ||
+          "Unable to create account.",
+          true
+        );
+
+        if (
+          turnstileWidgetId !== null &&
+          window.turnstile
+        ) {
+          window.turnstile.reset(
+            turnstileWidgetId
+          );
+        }
+
+      } finally {
+
+        button.disabled = false;
+        button.textContent = "Create account";
+      }
+    });
+  </script>
+
+
+<script>
+(function () {
+  const redirect = new URLSearchParams(
+    window.location.search
+  ).get("redirect");
+
+  const link = document.getElementById("signInLink");
+
+  if (link && redirect) {
+    link.href =
+      "login.html?redirect=" +
+      encodeURIComponent(redirect);
+  }
+})();
+</script>
+\n<script src="/js/role-nav.js"></script>
+</body>
+</html>

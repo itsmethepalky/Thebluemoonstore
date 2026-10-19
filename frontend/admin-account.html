@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Account — The Blue Moon</title>
+
+  <link rel="stylesheet" href="/css/store.css">
+
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/js/supabase.js"></script>
+  <script src="/js/auth-guard.js"></script>
+  <script src="/js/admin-auth.js"></script>
+
+</head>
+
+<body class="store-body admin-page">
+
+<header class="store-header">
+  <div class="store-header-inner">
+
+    <a href="/admin" class="blue-moon-admin-brand" aria-label="The Blue Moon Admin">
+      <span class="moon-brand-mark">☾</span>
+      <span>
+        <strong>THE BLUE MOON</strong>
+        <small>ADMIN</small>
+      </span>
+    </a>
+
+    <nav class="store-nav admin-nav" aria-label="Admin navigation">
+      <a href="/admin" title="Dashboard" aria-label="Dashboard">
+        <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="/shop" title="Store" aria-label="Store">
+        <i class="bi bi-shop"></i>
+        <span>Store</span>
+      </a>
+
+      <a href="/admin/orders" title="Orders" aria-label="Orders">
+        <i class="bi bi-box-seam"></i>
+        <span>Orders</span>
+      </a>
+
+      <a href="/admin/products" title="Products" aria-label="Products">
+        <i class="bi bi-boxes"></i>
+        <span>Products</span>
+      </a>
+
+      <a href="/admin/customers" title="Customers" aria-label="Customers">
+        <i class="bi bi-people"></i>
+        <span>Customers</span>
+      </a>
+
+      <a href="/admin/account" title="Admin Account" aria-label="Admin Account">
+        <i class="bi bi-person-circle"></i>
+        <span>Account</span>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main class="admin-shell">
+
+  <section class="admin-page-heading">
+    <div>
+      <span class="eyebrow">ADMINISTRATION</span>
+      <h1>Admin Account</h1>
+      <p>Manage and view your administrator profile.</p>
+    </div>
+  </section>
+
+  <section class="admin-account-layout">
+
+    <article class="admin-panel admin-profile-card">
+
+      <div class="admin-profile-avatar">
+        <i class="bi bi-person-fill"></i>
+      </div>
+
+      <h2 id="profileName">Loading...</h2>
+      <p id="profileEmail">Loading...</p>
+
+      <span class="admin-role-badge" id="profileRole">
+        Checking role...
+      </span>
+
+    </article>
+
+    <article class="admin-panel">
+
+      <div class="admin-panel-header">
+        <div>
+          <span class="eyebrow">PROFILE</span>
+          <h2>Account information</h2>
+        </div>
+      </div>
+
+      <div class="admin-info-grid">
+
+        <div class="admin-info-item">
+          <span>Name</span>
+          <strong id="infoName">—</strong>
+        </div>
+
+        <div class="admin-info-item">
+          <span>Email</span>
+          <strong id="infoEmail">—</strong>
+        </div>
+
+        <div class="admin-info-item">
+          <span>Phone</span>
+          <strong id="infoPhone">—</strong>
+        </div>
+
+        <div class="admin-info-item">
+          <span>Role</span>
+          <strong id="infoRole">—</strong>
+        </div>
+
+        <div class="admin-info-item">
+          <span>Account status</span>
+          <strong id="infoStatus">—</strong>
+        </div>
+
+      </div>
+
+      <div class="admin-account-actions">
+
+        <button type="button" class="btn btn-danger" id="logoutBtn">
+          <i class="bi bi-box-arrow-right"></i>
+          Sign out
+        </button>
+
+        <a href="/admin" class="btn btn-primary">
+          <i class="bi bi-speedometer2"></i>
+          Back to Dashboard
+        </a>
+
+      </div>
+
+    </article>
+
+  </section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  async function loadAccount() {
+    try {
+      /*
+       * Use the shared admin authentication flow.
+       *
+       * getAdminSession():
+       * - retries getSession()
+       * - attempts refreshSession()
+       * - only redirects when there is genuinely no usable session
+       */
+      await window.getAdminSession({
+        redirect: "/admin/account"
+      });
+
+      /*
+       * adminFetch():
+       * - sends the current access token
+       * - refreshes/retries if the backend returns 401/403
+       * - avoids immediately signing the user out
+       */
+      const response = await window.adminFetch("/api/auth/me");
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(
+          body.detail || "Unable to load administrator profile"
+        );
+      }
+
+      const data = await response.json();
+
+      /*
+       * Do not sign the user out here.
+       * If the authenticated user is not an admin, send them
+       * back to the normal account area instead.
+       */
+      if (data.role !== "admin") {
+        window.location.replace("/account");
+        return;
+      }
+
+      const profile = data.profile || {};
+
+      const name = profile.full_name || "Administrator";
+      const email = profile.email || data.email || "—";
+      const phone = profile.phone || "Not provided";
+      const role = profile.role || "admin";
+      const active = profile.is_active !== false;
+
+      document.getElementById("profileName").textContent = name;
+      document.getElementById("profileEmail").textContent = email;
+
+      document.getElementById("profileRole").textContent =
+        role.toUpperCase();
+
+      document.getElementById("infoName").textContent = name;
+      document.getElementById("infoEmail").textContent = email;
+      document.getElementById("infoPhone").textContent = phone;
+      document.getElementById("infoRole").textContent = role;
+      document.getElementById("infoStatus").textContent =
+        active ? "Active" : "Inactive";
+
+    } catch (error) {
+      console.error("ADMIN ACCOUNT:", error);
+
+      document.getElementById("profileName").textContent =
+        "Unable to load profile";
+
+      document.getElementById("profileEmail").textContent =
+        error.message || "Unknown error";
+    }
+  }
+
+  /*
+   * Logout remains an explicit user action.
+   * This is intentionally the only place on this page
+   * where signOut() is called.
+   */
+  document.getElementById("logoutBtn").addEventListener(
+    "click",
+    async function () {
+      try {
+        await window.supabaseClient.auth.signOut();
+      } finally {
+        window.location.replace("/login");
+      }
+    }
+  );
+
+  loadAccount();
+})();
+</script>
+
+<script src="/js/role-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — The Blue Moon</title>
+  <link rel="stylesheet" href="/css/store.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+
+<body class="store-body">
+
+<header class="store-header">
+  <div class="store-header-inner">
+    <a href="/" class="store-logo" aria-label="The Blue Moon">
+      <span class="logo-main">THE BLUE MOON</span>
+      <span class="logo-sub">EVERYDAY ESSENTIALS</span>
+    </a>
+
+    <nav class="store-nav admin-nav">
+      <a href="/" title="Home" aria-label="Home">
+        <i class="bi bi-house-door"></i>
+      </a>
+      <a href="/shop" title="Shop" aria-label="Shop">
+        <i class="bi bi-grid"></i>
+      </a>
+      <a href="/admin" class="active" title="Dashboard" aria-label="Dashboard">
+        <i class="bi bi-speedometer2"></i>
+      </a>
+      <a href="/admin/orders" title="Orders" aria-label="Orders">
+        <i class="bi bi-box-seam"></i>
+      </a>
+      <a href="/admin/products" title="Products" aria-label="Products">
+        <i class="bi bi-boxes"></i>
+      </a>
+      <a href="/admin/customers" title="Customers" aria-label="Customers">
+        <i class="bi bi-people"></i>
+      </a>
+      <a href="/admin/account" title="Account" aria-label="Account">
+        <i class="bi bi-person-circle"></i>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main class="store-container admin-container">
+
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">Administration</span>
+      <h1>Dashboard</h1>
+      <p>Manage orders, inventory and customers.</p>
+    </div>
+  </div>
+
+  <div id="adminError" class="notice error hidden"></div>
+
+  <section class="admin-stat-grid">
+
+    <a href="/admin/orders" class="admin-stat-card">
+      <span class="admin-stat-icon">
+        <i class="bi bi-receipt"></i>
+      </span>
+      <span class="admin-stat-label">Total Orders</span>
+      <strong id="totalOrders">—</strong>
+    </a>
+
+    <a href="/admin/orders?status=pending" class="admin-stat-card">
+      <span class="admin-stat-icon">
+        <i class="bi bi-hourglass-split"></i>
+      </span>
+      <span class="admin-stat-label">Pending</span>
+      <strong id="pendingOrders">—</strong>
+    </a>
+
+    <a href="/admin/orders" class="admin-stat-card">
+      <span class="admin-stat-icon">
+        <i class="bi bi-calendar-check"></i>
+      </span>
+      <span class="admin-stat-label">Today's Orders</span>
+      <strong id="todayOrders">—</strong>
+    </a>
+
+    <div class="admin-stat-card">
+      <span class="admin-stat-icon">
+        <i class="bi bi-cash-stack"></i>
+      </span>
+      <span class="admin-stat-label">Today's Sales</span>
+      <strong id="todaySales">—</strong>
+    </div>
+
+    <a href="/admin/customers" class="admin-stat-card">
+      <span class="admin-stat-icon">
+        <i class="bi bi-people"></i>
+      </span>
+      <span class="admin-stat-label">Customers</span>
+      <strong id="customers">—</strong>
+    </a>
+
+    <a href="/admin/products?low_stock=true" class="admin-stat-card">
+      <span class="admin-stat-icon">
+        <i class="bi bi-exclamation-triangle"></i>
+      </span>
+      <span class="admin-stat-label">Low Stock</span>
+      <strong id="lowStock">—</strong>
+    </a>
+
+  </section>
+
+  <section class="admin-section-grid">
+
+    <div class="admin-panel">
+      <div class="admin-panel-heading">
+        <div>
+          <span class="eyebrow">Activity</span>
+          <h2>Recent Orders</h2>
+        </div>
+        <a href="/admin/orders" class="text-link">View all</a>
+      </div>
+
+      <div id="recentOrders" class="admin-list">
+        <div class="loading-state">Loading orders...</div>
+      </div>
+    </div>
+
+    <div class="admin-panel">
+      <div class="admin-panel-heading">
+        <div>
+          <span class="eyebrow">Inventory</span>
+          <h2>Low Stock</h2>
+        </div>
+        <a href="/admin/products" class="text-link">Manage</a>
+      </div>
+
+      <div id="lowStockProducts" class="admin-list">
+        <div class="loading-state">Loading inventory...</div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- PROMOTIONS / DELIVERY -->
+  <section class="admin-panel admin-promo-section">
+    <div class="admin-panel-heading">
+      <div>
+        <span class="eyebrow">Store Settings</span>
+        <h2>Promotions & Delivery</h2>
+      </div>
+    </div>
+
+    <div id="promoError" class="notice error hidden"></div>
+    <div id="promoSuccess" class="notice success hidden"></div>
+
+    <div class="admin-promo-grid">
+
+      <!-- Delivery -->
+      <div class="admin-promo-card">
+        <h3>Delivery Charge</h3>
+
+        <p>
+          Current delivery charge:
+          <strong id="currentDeliveryCharge">—</strong>
+        </p>
+
+        <form id="deliveryForm" class="admin-promo-form">
+          <label for="deliveryCharge">New delivery charge</label>
+
+          <input
+            id="deliveryCharge"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+          >
+
+          <button type="submit" class="admin-action admin-promo-button">
+            <i class="bi bi-truck"></i>
+            <span>Update Delivery Charge</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Create promo -->
+      <div class="admin-promo-card">
+        <h3>Create Promotion</h3>
+
+        <form id="promotionForm" class="admin-promo-form">
+
+          <label for="promoCode">Promo Code</label>
+          <input
+            id="promoCode"
+            type="text"
+            maxlength="100"
+            placeholder="SAVE10"
+            required
+          >
+
+          <label for="promoName">Name</label>
+          <input
+            id="promoName"
+            type="text"
+            maxlength="200"
+            placeholder="10% discount"
+          >
+
+          <label for="promoDescription">Description</label>
+          <textarea
+            id="promoDescription"
+            maxlength="2000"
+            rows="2"
+            placeholder="Optional description"
+          ></textarea>
+
+          <label for="promoType">Discount Type</label>
+          <select id="promoType" required>
+            <option value="percentage">Percentage</option>
+            <option value="fixed">Fixed Amount</option>
+            <option value="free_delivery">Free Delivery</option>
+          </select>
+
+          <label for="promoValue">Discount Value</label>
+          <input
+            id="promoValue"
+            type="number"
+            min="0"
+            step="0.01"
+            value="10"
+            required
+          >
+
+          <label for="promoMinimum">Minimum Order Amount</label>
+          <input
+            id="promoMinimum"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Optional"
+          >
+
+          <label for="promoMaximum">Maximum Discount</label>
+          <input
+            id="promoMaximum"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Optional"
+          >
+
+          <label for="promoUsageLimit">Usage Limit</label>
+          <input
+            id="promoUsageLimit"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Unlimited"
+          >
+
+          <label for="promoPerCustomer">Per Customer Limit</label>
+          <input
+            id="promoPerCustomer"
+            type="number"
+            min="1"
+            step="1"
+            placeholder="Unlimited"
+          >
+
+          <label for="promoStarts">Starts At</label>
+          <input
+            id="promoStarts"
+            type="datetime-local"
+          >
+
+          <label for="promoExpires">Expires At</label>
+          <input
+            id="promoExpires"
+            type="datetime-local"
+          >
+
+          <label class="admin-promo-active" for="promoActive">
+            <input
+              id="promoActive"
+              type="checkbox"
+              checked
+            >
+            <span class="admin-promo-switch" aria-hidden="true"></span>
+            <span class="admin-promo-active-text">Active</span>
+          </label>
+
+          <button type="submit" class="admin-action admin-promo-button primary">
+            <i class="bi bi-plus-circle"></i>
+            <span>Create Promotion</span>
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Existing promotions -->
+    <div class="admin-promo-list">
+      <div class="admin-panel-heading admin-promo-list-heading">
+        <div>
+          <span class="eyebrow">Management</span>
+          <h3>Existing Promotions</h3>
+        </div>
+      </div>
+
+      <div id="promotionsList" class="admin-list">
+        <div class="loading-state">Loading promotions...</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="admin-quick-actions">
+    <a href="/admin/orders" class="admin-action">
+      <i class="bi bi-box-seam"></i>
+      <span>Manage Orders</span>
+    </a>
+
+    <a href="/admin/products" class="admin-action">
+      <i class="bi bi-boxes"></i>
+      <span>Manage Products</span>
+    </a>
+
+    <a href="/admin/customers" class="admin-action">
+      <i class="bi bi-people"></i>
+      <span>View Customers</span>
+    </a>
+
+    <a href="/shop" class="admin-action">
+      <i class="bi bi-shop"></i>
+      <span>View Store</span>
+    </a>
+  </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase.js"></script>
+  <script src="/js/auth-guard.js"></script>
+  <script src="/js/admin-auth.js"></script>
+
+<script>
+async function api(url, options = {}) {
+  const response = await window.adminFetch(url, options);
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(body.detail || "Request failed");
+  }
+
+  return body;
+}
+function money(value) {
+  return "Rs. " + Number(value || 0).toLocaleString("en-NP", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function statusClass(status) {
+  return "status-" + String(status || "").replaceAll("_", "-");
+}
+
+async function loadDashboard() {
+  try {
+    const data = await api("/api/admin/dashboard");
+
+    document.getElementById("totalOrders").textContent =
+      data.stats.total_orders;
+
+    document.getElementById("pendingOrders").textContent =
+      data.stats.pending_orders;
+
+    document.getElementById("todayOrders").textContent =
+      data.stats.today_orders;
+
+    document.getElementById("todaySales").textContent =
+      money(data.stats.today_sales);
+
+    document.getElementById("customers").textContent =
+      data.stats.customers;
+
+    document.getElementById("lowStock").textContent =
+      data.stats.low_stock;
+
+    const recent = document.getElementById("recentOrders");
+
+    if (!data.recent_orders.length) {
+      recent.innerHTML =
+        '<div class="empty-state">No orders yet.</div>';
+    } else {
+      recent.innerHTML = data.recent_orders.map(order => `
+        <a class="admin-list-row"
+           href="/admin/order?id=${encodeURIComponent(order.id)}">
+          <span>
+            <strong>${escapeHtml(order.order_no)}</strong>
+            <small>${new Date(order.created_at).toLocaleString()}</small>
+          </span>
+          <span class="admin-list-right">
+            <strong>${money(order.total_amount)}</strong>
+            <small class="status-badge ${statusClass(order.status)}">
+              ${escapeHtml(order.status)}
+            </small>
+          </span>
+        </a>
+      `).join("");
+    }
+
+    const stock = document.getElementById("lowStockProducts");
+
+    if (!data.low_stock_products.length) {
+      stock.innerHTML =
+        '<div class="empty-state">All products are above reorder level.</div>';
+    } else {
+      stock.innerHTML = data.low_stock_products.map(product => `
+        <a class="admin-list-row"
+           href="/admin/products">
+          <span>
+            <strong>${escapeHtml(product.name)}</strong>
+            <small>${escapeHtml(product.sku)}</small>
+          </span>
+          <span class="stock-warning">
+            ${product.stock_quantity} left
+          </span>
+        </a>
+      `).join("");
+    }
+
+  } catch (error) {
+    const box = document.getElementById("adminError");
+    box.textContent = error.message;
+    box.classList.remove("hidden");
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+
+function showPromoMessage(message, success = false) {
+  const errorBox = document.getElementById("promoError");
+  const successBox = document.getElementById("promoSuccess");
+
+  errorBox.classList.add("hidden");
+  successBox.classList.add("hidden");
+
+  if (success) {
+    successBox.textContent = message;
+    successBox.classList.remove("hidden");
+  } else {
+    errorBox.textContent = message;
+    errorBox.classList.remove("hidden");
+  }
+}
+
+function optionalNumber(id) {
+  const value = document.getElementById(id).value.trim();
+  return value === "" ? null : Number(value);
+}
+
+function optionalDateTime(id) {
+  const value = document.getElementById(id).value.trim();
+
+  if (!value) {
+    return null;
+  }
+
+  return new Date(value).toISOString();
+}
+
+function renderPromotion(promo) {
+  const activeText = promo.is_active ? "Active" : "Inactive";
+
+  let discountText;
+
+  if (promo.discount_type === "percentage") {
+    discountText = Number(promo.discount_value) + "%";
+  } else if (promo.discount_type === "fixed") {
+    discountText = money(promo.discount_value);
+  } else {
+    discountText = "Free delivery";
+  }
+
+  const usageLimit =
+    promo.usage_limit == null
+      ? "Unlimited"
+      : `${promo.usage_count || 0} / ${promo.usage_limit}`;
+
+  return `
+    <div class="admin-list-row">
+      <span>
+        <strong>${escapeHtml(promo.code)}</strong>
+        <small>
+          ${escapeHtml(promo.name || "")}
+          · ${escapeHtml(discountText)}
+          · ${escapeHtml(activeText)}
+        </small>
+        <small>
+          Usage: ${escapeHtml(usageLimit)}
+        </small>
+      </span>
+
+      <span class="admin-list-right">
+        <small>
+          ${promo.minimum_order_amount != null
+            ? "Min " + money(promo.minimum_order_amount)
+            : "No minimum"}
+        </small>
+
+        <button
+          type="button"
+          class="admin-action"
+          style="border:0;cursor:pointer;margin-top:6px;"
+          onclick="togglePromotion(${promo.id}, ${promo.is_active})"
+        >
+          <i class="bi ${promo.is_active ? "bi-pause-circle" : "bi-play-circle"}"></i>
+          <span>${promo.is_active ? "Disable" : "Enable"}</span>
+        </button>
+
+        <button
+          type="button"
+          class="admin-action"
+          style="border:0;cursor:pointer;margin-top:6px;"
+          onclick="deletePromotion(${promo.id})"
+        >
+          <i class="bi bi-trash"></i>
+          <span>Delete</span>
+        </button>
+      </span>
+    </div>
+  `;
+}
+
+async function loadStoreSettings() {
+  const settings = await api("/api/admin/store-settings");
+
+  document.getElementById("currentDeliveryCharge").textContent =
+    money(settings.delivery_charge);
+
+  document.getElementById("deliveryCharge").value =
+    Number(settings.delivery_charge || 0);
+}
+
+async function loadPromotions() {
+  const promotions = await api("/api/admin/promotions?include_inactive=true");
+
+  const list = document.getElementById("promotionsList");
+
+  if (!promotions.length) {
+    list.innerHTML =
+      '<div class="empty-state">No promotions created yet.</div>';
+    return;
+  }
+
+  list.innerHTML = promotions.map(renderPromotion).join("");
+}
+
+async function togglePromotion(id, currentActive) {
+  try {
+    await api(`/api/admin/promotions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        is_active: !currentActive
+      })
+    });
+
+    showPromoMessage(
+      currentActive
+        ? "Promotion disabled."
+        : "Promotion enabled.",
+      true
+    );
+
+    await loadPromotions();
+  } catch (error) {
+    showPromoMessage(error.message);
+  }
+}
+
+async function deletePromotion(id) {
+  const confirmed = window.confirm(
+    "Delete this promotion? If it has already been used, it will be deactivated instead."
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const result = await api(`/api/admin/promotions/${id}`, {
+      method: "DELETE"
+    });
+
+    showPromoMessage(
+      result.deactivated
+        ? "Promotion has been deactivated because it has usage history."
+        : "Promotion deleted.",
+      true
+    );
+
+    await loadPromotions();
+  } catch (error) {
+    showPromoMessage(error.message);
+  }
+}
+
+document.getElementById("deliveryForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  try {
+    const deliveryCharge =
+      Number(document.getElementById("deliveryCharge").value);
+
+    await api("/api/admin/store-settings/delivery-charge", {
+      method: "PATCH",
+      body: JSON.stringify({
+        delivery_charge: deliveryCharge
+      })
+    });
+
+    showPromoMessage("Delivery charge updated successfully.", true);
+    await loadStoreSettings();
+  } catch (error) {
+    showPromoMessage(error.message);
+  }
+});
+
+document.getElementById("promotionForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  try {
+    const discountType =
+      document.getElementById("promoType").value;
+
+    const discountValue =
+      discountType === "free_delivery"
+        ? 0
+        : Number(document.getElementById("promoValue").value);
+
+    const payload = {
+      code: document.getElementById("promoCode").value.trim(),
+      name: document.getElementById("promoName").value.trim() || null,
+      description:
+        document.getElementById("promoDescription").value.trim() || null,
+
+      discount_type: discountType,
+      discount_value: discountValue,
+
+      minimum_order_amount:
+        optionalNumber("promoMinimum"),
+
+      maximum_discount_amount:
+        optionalNumber("promoMaximum"),
+
+      starts_at:
+        optionalDateTime("promoStarts"),
+
+      expires_at:
+        optionalDateTime("promoExpires"),
+
+      usage_limit:
+        optionalNumber("promoUsageLimit"),
+
+      per_customer_limit:
+        optionalNumber("promoPerCustomer"),
+
+      is_active:
+        document.getElementById("promoActive").checked
+    };
+
+    await api("/api/admin/promotions", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    showPromoMessage("Promotion created successfully.", true);
+
+    document.getElementById("promotionForm").reset();
+
+    document.getElementById("promoType").value = "percentage";
+    document.getElementById("promoValue").value = "10";
+    document.getElementById("promoActive").checked = true;
+
+    await loadPromotions();
+  } catch (error) {
+    showPromoMessage(error.message);
+  }
+});
+
+document.getElementById("promoType").addEventListener("change", event => {
+  const valueInput = document.getElementById("promoValue");
+
+  if (event.target.value === "free_delivery") {
+    valueInput.value = "0";
+    valueInput.disabled = true;
+  } else {
+    valueInput.disabled = false;
+
+    if (Number(valueInput.value) === 0) {
+      valueInput.value = "10";
+    }
+  }
+});
+
+async function loadPromotionManagement() {
+  try {
+    await Promise.all([
+      loadStoreSettings(),
+      loadPromotions()
+    ]);
+  } catch (error) {
+    showPromoMessage(error.message);
+  }
+}
+
+loadDashboard();
+loadPromotionManagement();
+</script>
+
+</body>
+</html>

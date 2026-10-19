@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Shop — The Blue Moon</title>
+
+  <link rel="stylesheet" href="css/store.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+
+</head>
+
+<body>
+
+<header class="store-header">
+  <div class="store-container nav-inner">
+
+    <a href="/" class="store-logo">
+      <span class="logo-main">THE BLUE MOON</span>
+      <span class="logo-sub">EVERYDAY ESSENTIALS</span>
+    </a>
+
+    <nav class="store-nav" aria-label="Main navigation">
+  <a href="/" title="Home" aria-label="Home">
+    <i class="bi bi-house-door"></i>
+    <span>Home</span>
+  </a>
+
+  <a href="/shop" title="Shop" aria-label="Shop">
+    <i class="bi bi-grid"></i>
+    <span>Shop</span>
+  </a>
+
+  <a href="/orders" title="My Orders" aria-label="My Orders">
+    <i class="bi bi-box-seam"></i>
+    <span>Orders</span>
+  </a>
+
+  <a href="/cart" class="cart-link" title="Cart" aria-label="Cart">
+    <i class="bi bi-cart3"></i>
+    <span>Cart</span>
+    <span class="cart-count" id="cartCount">0</span>
+  </a>
+
+  <a href="/account" title="My Account" aria-label="My Account">
+    <i class="bi bi-person-circle"></i>
+    <span>Account</span>
+  </a>
+</nav>
+
+  </div>
+</header>
+
+
+<main class="shop-page">
+
+  <!-- Compact shop header -->
+  <section class="shop-top">
+    <div class="shop-top-inner">
+      <div>
+        <div class="shop-eyebrow">THE BLUE MOON</div>
+        <h1>Shop all products</h1>
+        <p>Everyday essentials, thoughtfully selected.</p>
+      </div>
+
+      <div class="shop-top-meta">
+        <span id="resultCount">0 products</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Catalog controls -->
+  <section class="shop-catalog">
+
+    <!-- Always-visible search -->
+    <div class="shop-mobile-search">
+      <i class="bi bi-search"></i>
+      <input
+        id="searchInput"
+        type="search"
+        placeholder="Search products..."
+        autocomplete="off"
+        aria-label="Search products"
+      >
+    </div>
+
+    <!-- Catalog toolbar -->
+    <div class="shop-toolbar">
+
+      <button
+        type="button"
+        class="shop-filter-toggle"
+        id="filterToggle"
+        aria-expanded="false"
+        aria-controls="shopFilters"
+      >
+        <i class="bi bi-sliders2"></i>
+        <span>Filters</span>
+      </button>
+
+      <div class="shop-toolbar-right">
+
+        <button
+          type="button"
+          class="shop-sort-toggle"
+          id="sortToggle"
+          aria-expanded="false"
+          aria-controls="sortFilter"
+        >
+          <span>Sort</span>
+          <i class="bi bi-chevron-down"></i>
+        </button>
+
+        <select
+          id="sortFilter"
+          class="shop-sort-select"
+          aria-label="Sort products"
+        >
+          <option value="featured">Featured</option>
+          <option value="name">Name: A–Z</option>
+          <option value="price-low">Price: Low to high</option>
+          <option value="price-high">Price: High to low</option>
+        </select>
+
+      </div>
+    </div>
+
+    <!-- Hidden filter panel -->
+    <aside
+      class="shop-filters"
+      id="shopFilters"
+      aria-hidden="true"
+    >
+
+      <div class="shop-filter-header">
+        <div>
+          <span class="filter-label">FILTER</span>
+          <h2>Refine your search</h2>
+        </div>
+
+        <button
+          type="button"
+          class="shop-filter-close"
+          id="filterClose"
+          aria-label="Close filters"
+        >
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="shop-filter-group">
+        <label for="categoryFilter">Category</label>
+
+        <select id="categoryFilter">
+          <option value="">All categories</option>
+        </select>
+      </div>
+
+      <div class="shop-filter-group">
+        <label for="brandFilter">Brand</label>
+
+        <select id="brandFilter">
+          <option value="">All brands</option>
+        </select>
+      </div>
+
+      <label class="shop-stock-filter" for="stockFilter">
+        <input
+          type="checkbox"
+          id="stockFilter"
+        >
+        <span class="shop-check"></span>
+        <span>In stock only</span>
+      </label>
+
+      <button
+        type="button"
+        class="shop-clear"
+        id="clearFilters"
+      >
+        Clear all filters
+      </button>
+
+    </aside>
+
+    <!-- Product area -->
+    <div class="shop-results">
+
+      <div class="shop-results-head">
+        <span class="shop-results-label">PRODUCTS</span>
+        <span id="resultCountDesktop">0 products</span>
+      </div>
+
+      <div
+        class="shop-product-grid"
+        id="shopProducts"
+      ></div>
+
+      <div
+        class="shop-empty hidden"
+        id="shopEmpty"
+      >
+        <i class="bi bi-box-seam"></i>
+
+        <h3>No products found</h3>
+
+        <p>
+          Try changing your search or filters.
+        </p>
+
+        <button
+          type="button"
+          id="emptyClear"
+          class="btn btn-primary"
+        >
+          Clear filters
+        </button>
+      </div>
+
+    </div>
+
+  </section>
+
+</main>
+
+
+<footer class="store-footer">
+
+  <div class="store-container footer-inner">
+
+    <div class="footer-brand">
+
+      <a href="/" class="store-logo" aria-label="The Blue Moon">
+        <span class="logo-main">THE BLUE MOON</span>
+        <span class="logo-sub">EVERYDAY ESSENTIALS</span>
+      </a>
+
+      <p>Your everyday store, now online.</p>
+
+    </div>
+
+    <div class="footer-links">
+      <a href="/shop">Shop</a>
+      <a href="/account">My Account</a>
+      <a href="/orders">Orders</a>
+      <a href="/cart">Cart</a>
+    </div>
+
+  </div>
+
+</footer>
+
+
+<script>
+
+const API_BASE = "http://127.0.0.1:8001";
+
+const shopProducts =
+  document.getElementById("shopProducts");
+
+const shopEmpty =
+  document.getElementById("shopEmpty");
+
+const resultCount =
+  document.getElementById("resultCount");
+
+const searchInput =
+  document.getElementById("searchInput");
+
+const categoryFilter =
+  document.getElementById("categoryFilter");
+
+const brandFilter =
+  document.getElementById("brandFilter");
+
+const stockFilter =
+  document.getElementById("stockFilter");
+
+const sortFilter =
+  document.getElementById("sortFilter");
+
+const clearFilters =
+  document.getElementById("clearFilters");
+
+const emptyClear =
+  document.getElementById("emptyClear");
+
+const cartCount =
+  document.getElementById("cartCount");
+
+
+let allProducts = [];
+let categories = [];
+let brands = [];
+
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+function getPrimaryImage(product) {
+
+  if (!product.images || !product.images.length) {
+    return null;
+  }
+
+  const primary =
+    product.images.find(image => image.is_primary);
+
+  return (primary || product.images[0]).image_url;
+}
+
+
+function formatPrice(value) {
+
+  const number = Number(value || 0);
+
+  return `NPR ${number.toLocaleString("en-NP", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })}`;
+}
+
+
+function populateFilters() {
+
+  categoryFilter.innerHTML =
+    `<option value="">All categories</option>`;
+
+  categories.forEach(category => {
+
+    const option =
+      document.createElement("option");
+
+    option.value = category.id;
+    option.textContent = category.name;
+
+    categoryFilter.appendChild(option);
+
+  });
+
+
+  brandFilter.innerHTML =
+    `<option value="">All brands</option>`;
+
+  brands.forEach(brand => {
+
+    const option =
+      document.createElement("option");
+
+    option.value = brand.id;
+    option.textContent = brand.name;
+
+    brandFilter.appendChild(option);
+
+  });
+
+}
+
+
+function renderProducts(products) {
+
+  resultCount.textContent =
+    `${products.length} product${products.length === 1 ? "" : "s"}`;
+
+
+  if (!products.length) {
+
+    shopProducts.innerHTML = "";
+
+    shopEmpty.classList.remove("hidden");
+
+    return;
+  }
+
+
+  shopEmpty.classList.add("hidden");
+
+
+  shopProducts.innerHTML =
+    products.map(product => {
+
+      const image =
+        getPrimaryImage(product);
+
+      const inStock =
+        Number(product.stock_quantity) > 0;
+
+
+      return `
+        <article class="product-card">
+
+          <a
+            href="/product?id=${product.id}"
+            class="product-image"
+          >
+
+            ${
+              image
+                ? `
+                  <img
+                    src="${escapeHtml(image)}"
+                    alt="${escapeHtml(product.name)}"
+                    loading="lazy"
+                  >
+                `
+                : `
+                  <div class="product-placeholder">
+                    ☾
+                  </div>
+                `
+            }
+
+          </a>
+
+
+          <div class="product-info">
+
+            <p class="product-sku">
+              ${escapeHtml(product.sku || "PRODUCT")}
+            </p>
+
+            <h3>
+              <a href="/product?id=${product.id}">
+                ${escapeHtml(product.name)}
+              </a>
+            </h3>
+
+            <div class="product-bottom">
+
+              <strong class="product-price">
+                ${formatPrice(product.unit_price)}
+              </strong>
+
+              <span
+                class="stock-status ${inStock ? "" : "out"}"
+              >
+                ${inStock ? "In stock" : "Out of stock"}
+              </span>
+
+            </div>
+
+          </div>
+
+        </article>
+      `;
+
+    }).join("");
+
+}
+
+
+function applyFilters() {
+
+  const search =
+    searchInput.value.trim().toLowerCase();
+
+  const category =
+    categoryFilter.value;
+
+  const brand =
+    brandFilter.value;
+
+  const onlyStock =
+    stockFilter.checked;
+
+  const sort =
+    sortFilter.value;
+
+
+  let filtered =
+    allProducts.filter(product => {
+
+      const matchesSearch =
+        !search ||
+        String(product.name || "")
+          .toLowerCase()
+          .includes(search) ||
+        String(product.sku || "")
+          .toLowerCase()
+          .includes(search);
+
+
+      const matchesCategory =
+        !category ||
+        String(product.category_id) === category;
+
+
+      const matchesBrand =
+        !brand ||
+        String(product.brand_id) === brand;
+
+
+      const matchesStock =
+        !onlyStock ||
+        Number(product.stock_quantity) > 0;
+
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesBrand &&
+        matchesStock
+      );
+
+    });
+
+
+  if (sort === "price-low") {
+
+    filtered.sort(
+      (a, b) =>
+        Number(a.unit_price) -
+        Number(b.unit_price)
+    );
+
+  } else if (sort === "price-high") {
+
+    filtered.sort(
+      (a, b) =>
+        Number(b.unit_price) -
+        Number(a.unit_price)
+    );
+
+  } else if (sort === "name") {
+
+    filtered.sort(
+      (a, b) =>
+        String(a.name || "")
+          .localeCompare(
+            String(b.name || "")
+          )
+    );
+
+  } else if (sort === "featured") {
+
+    // Featured keeps the original API/product order.
+    // No additional sorting is applied.
+
+  }
+
+
+  renderProducts(filtered);
+}
+
+
+async function loadCategories() {
+
+  const response =
+    await fetch(`${API_BASE}/api/categories`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load categories");
+  }
+
+  categories =
+    await response.json();
+
+}
+
+
+async function loadBrands() {
+
+  const response =
+    await fetch(`${API_BASE}/api/brands`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load brands");
+  }
+
+  brands =
+    await response.json();
+
+}
+
+
+async function loadProducts() {
+
+  const response =
+    await fetch(`${API_BASE}/api/products`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load products");
+  }
+
+  allProducts =
+    await response.json();
+
+}
+
+
+async function initializeShop() {
+
+  try {
+
+    await Promise.all([
+      loadProducts(),
+      loadCategories(),
+      loadBrands()
+    ]);
+
+    populateFilters();
+    applyFilters();
+
+  } catch (error) {
+
+    console.error("Shop loading error:", error);
+
+    resultCount.textContent =
+      "Unable to load products.";
+
+    shopProducts.innerHTML = `
+      <div class="product-loading">
+        Unable to load the shop right now.
+        Please refresh the page.
+      </div>
+    `;
+
+  }
+
+}
+
+
+function updateCartCount() {
+
+  try {
+
+    const cart =
+      JSON.parse(
+        localStorage.getItem("blueMoonCart") || "[]"
+      );
+
+    const count =
+      cart.reduce(
+        (total, item) =>
+          total + Number(item.quantity || 0),
+        0
+      );
+
+    cartCount.textContent = count;
+
+  } catch {
+
+    cartCount.textContent = "0";
+
+  }
+
+}
+
+
+function resetFilters() {
+
+  searchInput.value = "";
+  categoryFilter.value = "";
+  brandFilter.value = "";
+  stockFilter.checked = false;
+  sortFilter.value = "featured";
+
+  applyFilters();
+
+}
+
+
+searchInput.addEventListener(
+  "input",
+  applyFilters
+);
+
+categoryFilter.addEventListener(
+  "change",
+  applyFilters
+);
+
+brandFilter.addEventListener(
+  "change",
+  applyFilters
+);
+
+stockFilter.addEventListener(
+  "change",
+  applyFilters
+);
+
+sortFilter.addEventListener(
+  "change",
+  applyFilters
+);
+
+clearFilters.addEventListener(
+  "click",
+  resetFilters
+);
+
+emptyClear.addEventListener(
+  "click",
+  resetFilters
+);
+
+
+updateCartCount();
+initializeShop();
+
+</script>
+
+
+<script>
+(function () {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  document.querySelectorAll(".store-nav > a").forEach(link => {
+    const href = link.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return;
+    }
+
+    const normalizedHref =
+      href.replace(/\/+$/, "") || "/";
+
+    const isActive =
+      normalizedHref === path ||
+      (
+        normalizedHref === "/shop" &&
+        (path === "/product" || path.startsWith("/product/"))
+      ) ||
+      (
+        normalizedHref === "/orders" &&
+        (path === "/order" || path.startsWith("/order/"))
+      ) ||
+      (
+        normalizedHref === "/account" &&
+        (
+          path === "/account" ||
+          path === "/checkout" ||
+          path === "/login" ||
+          path === "/register"
+        )
+      );
+
+    if (isActive) {
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+    }
+  });
+})();
+</script>
+
+<script src="/js/role-nav.js"></script>
+</body>
+</html>
+
+<script>
+(function () {
+  const mobileSearch = document.getElementById("mobileSearchInput");
+  const desktopSearch = document.getElementById("searchInput");
+
+  if (!mobileSearch || !desktopSearch) return;
+
+  mobileSearch.addEventListener("input", function () {
+    desktopSearch.value = mobileSearch.value;
+    desktopSearch.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  desktopSearch.addEventListener("input", function () {
+    if (mobileSearch.value !== desktopSearch.value) {
+      mobileSearch.value = desktopSearch.value;
+    }
+  });
+})();
+</script>
+
+<script>
+(function () {
+  const filterToggle = document.getElementById("filterToggle");
+  const filterClose = document.getElementById("filterClose");
+  const filters = document.getElementById("shopFilters");
+
+  if (!filterToggle || !filters) return;
+
+  function openFilters() {
+    filters.classList.add("is-open");
+    filters.setAttribute("aria-hidden", "false");
+    filterToggle.setAttribute("aria-expanded", "true");
+  }
+
+  function closeFilters() {
+    filters.classList.remove("is-open");
+    filters.setAttribute("aria-hidden", "true");
+    filterToggle.setAttribute("aria-expanded", "false");
+  }
+
+  filterToggle.addEventListener("click", function () {
+    if (filters.classList.contains("is-open")) {
+      closeFilters();
+    } else {
+      openFilters();
+    }
+  });
+
+  if (filterClose) {
+    filterClose.addEventListener("click", closeFilters);
+  }
+})();
+</script>

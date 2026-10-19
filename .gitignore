@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.env.*
+!.env.example
+
+# Never upload environment files or credentials
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local recovery and backup copies
+**/*.before-*
+frontend/_recovery_latest/
+
+# Development backups
+*.backup
+*.backup-*
+*.before-*
+*.bak

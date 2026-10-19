@@ -1,0 +1,35 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class Settings:
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
+    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv(
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "",
+    )
+
+    def validate(self):
+        missing = []
+
+        if not self.SUPABASE_URL:
+            missing.append("SUPABASE_URL")
+
+        if not self.SUPABASE_ANON_KEY:
+            missing.append("SUPABASE_ANON_KEY")
+
+        if not self.SUPABASE_SERVICE_ROLE_KEY:
+            missing.append("SUPABASE_SERVICE_ROLE_KEY")
+
+        if missing:
+            raise RuntimeError(
+                "Missing required environment variables: "
+                + ", ".join(missing)
+            )
+
+
+settings = Settings()

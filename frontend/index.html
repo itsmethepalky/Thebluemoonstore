@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>The Blue Moon — Your Everyday Store</title>
+
+  <link rel="stylesheet" href="css/store.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+
+<body>
+
+  <!-- Navigation -->
+  <header class="store-header">
+    <div class="store-container nav-inner">
+
+      <a href="/" class="store-logo">
+        <span class="logo-main">THE BLUE MOON</span>
+        <span class="logo-sub">EVERYDAY ESSENTIALS</span>
+      </a>
+
+      <nav class="store-nav" aria-label="Main navigation">
+  <a href="/" title="Home" aria-label="Home">
+    <i class="bi bi-house-door"></i>
+    <span>Home</span>
+  </a>
+
+  <a href="/shop" title="Shop" aria-label="Shop">
+    <i class="bi bi-grid"></i>
+    <span>Shop</span>
+  </a>
+
+  <a href="/orders" title="My Orders" aria-label="My Orders">
+    <i class="bi bi-box-seam"></i>
+    <span>Orders</span>
+  </a>
+
+  <a href="/cart" class="cart-link" title="Cart" aria-label="Cart">
+    <i class="bi bi-cart3"></i>
+    <span>Cart</span>
+    <span class="cart-count" id="cartCount">0</span>
+  </a>
+
+  <a href="/account" title="My Account" aria-label="My Account">
+    <i class="bi bi-person-circle"></i>
+    <span>Account</span>
+  </a>
+</nav>
+
+    </div>
+  </header>
+
+
+  <main>
+
+    <!-- Hero -->
+    <section class="store-hero">
+      <div class="store-container hero-inner">
+
+        <div class="hero-copy">
+
+          <p class="eyebrow">WELCOME TO THE BLUE MOON</p>
+
+          <h1>
+            Everyday products.
+            <span>Simple shopping.</span>
+          </h1>
+
+          <p class="hero-text">
+            Discover everyday essentials from your trusted store,
+            all in one simple online shopping experience.
+          </p>
+
+          <div class="hero-actions">
+            <a href="/shop" class="store-button primary">
+              Shop Now
+            </a>
+
+            <a href="#featured" class="store-button secondary">
+              Explore Products
+            </a>
+          </div>
+
+        </div>
+
+        <div class="hero-card">
+          <div class="moon-symbol">☾</div>
+
+          <p>THE BLUE MOON</p>
+
+          <span>
+            Your everyday store,
+            now online.
+          </span>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- Featured Products -->
+    <section class="featured-section" id="featured">
+
+      <div class="store-container">
+
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">SHOP PICKS</p>
+            <h2>Featured Products</h2>
+          </div>
+
+          <a href="/shop" class="section-link">
+            View all →
+          </a>
+        </div>
+
+
+        <div id="featuredProducts" class="product-grid">
+
+          <div class="product-loading">
+            Loading products...
+          </div>
+
+        </div>
+
+        <div id="productsError" class="products-error hidden">
+          Unable to load products right now.
+          Please refresh the page and try again.
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- Why Shop -->
+    <section class="store-benefits">
+
+      <div class="store-container benefits-grid">
+
+        <article class="benefit-card">
+          <div class="benefit-icon">✦</div>
+          <h3>Everyday Essentials</h3>
+          <p>
+            Products you actually need, available in one convenient place.
+          </p>
+        </article>
+
+        <article class="benefit-card">
+          <div class="benefit-icon">◈</div>
+          <h3>Simple Shopping</h3>
+          <p>
+            Browse products, add them to your cart, and order with ease.
+          </p>
+        </article>
+
+        <article class="benefit-card">
+          <div class="benefit-icon">✓</div>
+          <h3>Trusted Store</h3>
+          <p>
+            Your online shopping experience powered by The Blue Moon.
+          </p>
+        </article>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- Footer -->
+  <footer class="store-footer">
+
+    <div class="store-container footer-inner">
+
+      <div>
+        <strong>THE BLUE MOON</strong>
+        <p>Your everyday store, now online.</p>
+      </div>
+
+      <div class="footer-links">
+        <a href="/shop">Shop</a>
+        <a href="/account">Account</a>
+        <a href="/cart">Cart</a>
+      </div>
+
+    </div>
+
+  </footer>
+
+
+  <script>
+    const API_BASE = "http://127.0.0.1:8001";
+
+    const featuredProducts =
+      document.getElementById("featuredProducts");
+
+    const productsError =
+      document.getElementById("productsError");
+
+    const cartCount =
+      document.getElementById("cartCount");
+
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+
+    function getPrimaryImage(product) {
+
+      if (!product.images || !product.images.length) {
+        return null;
+      }
+
+      const primary =
+        product.images.find(image => image.is_primary);
+
+      return (primary || product.images[0]).image_url;
+    }
+
+
+    function formatPrice(value) {
+
+      const number = Number(value || 0);
+
+      return `NPR ${number.toLocaleString("en-NP", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      })}`;
+    }
+
+
+    function renderProducts(products) {
+
+      if (!products.length) {
+
+        featuredProducts.innerHTML = `
+          <div class="product-loading">
+            No products are currently available.
+          </div>
+        `;
+
+        return;
+      }
+
+
+      featuredProducts.innerHTML = products
+        .slice(0, 6)
+        .map(product => {
+
+          const image = getPrimaryImage(product);
+
+          return `
+            <article class="product-card">
+
+              <a
+                href="/product?id=${product.id}"
+                class="product-image"
+              >
+
+                ${
+                  image
+                    ? `
+                      <img
+                        src="${escapeHtml(image)}"
+                        alt="${escapeHtml(product.name)}"
+                        loading="lazy"
+                      >
+                    `
+                    : `
+                      <div class="product-placeholder">
+                        ☾
+                      </div>
+                    `
+                }
+
+              </a>
+
+
+              <div class="product-info">
+
+                <p class="product-sku">
+                  ${escapeHtml(product.sku || "PRODUCT")}
+                </p>
+
+                <h3>
+                  <a href="/product?id=${product.id}">
+                    ${escapeHtml(product.name)}
+                  </a>
+                </h3>
+
+                <div class="product-bottom">
+
+                  <strong class="product-price">
+                    ${formatPrice(product.unit_price)}
+                  </strong>
+
+                  ${
+                    Number(product.stock_quantity) > 0
+                      ? `<span class="stock-status">In stock</span>`
+                      : `<span class="stock-status out">Out of stock</span>`
+                  }
+
+                </div>
+
+              </div>
+
+            </article>
+          `;
+
+        })
+        .join("");
+    }
+
+
+    async function loadProducts() {
+
+      try {
+
+        const response =
+          await fetch(`${API_BASE}/api/products`);
+
+        if (!response.ok) {
+          throw new Error("Failed to load products");
+        }
+
+        const products =
+          await response.json();
+
+        renderProducts(products);
+
+      } catch (error) {
+
+        console.error("Product loading error:", error);
+
+        featuredProducts.innerHTML = "";
+
+        productsError.classList.remove("hidden");
+      }
+    }
+
+
+    function updateCartCount() {
+
+      try {
+
+        const cart =
+          JSON.parse(localStorage.getItem("blueMoonCart") || "[]");
+
+        const count =
+          cart.reduce(
+            (total, item) =>
+              total + Number(item.quantity || 0),
+            0
+          );
+
+        cartCount.textContent = count;
+
+      } catch {
+
+        cartCount.textContent = "0";
+      }
+    }
+
+
+    updateCartCount();
+    loadProducts();
+  </script>
+
+
+<script>
+(function () {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  document.querySelectorAll(".store-nav > a").forEach(link => {
+    const href = link.getAttribute("href");
+
+    if (!href || href.startsWith("#")) {
+      return;
+    }
+
+    const normalizedHref =
+      href.replace(/\/+$/, "") || "/";
+
+    const isActive =
+      normalizedHref === path ||
+      (
+        normalizedHref === "/shop" &&
+        (path === "/product" || path.startsWith("/product/"))
+      ) ||
+      (
+        normalizedHref === "/orders" &&
+        (path === "/order" || path.startsWith("/order/"))
+      ) ||
+      (
+        normalizedHref === "/account" &&
+        (
+          path === "/account" ||
+          path === "/checkout" ||
+          path === "/login" ||
+          path === "/register"
+        )
+      );
+
+    if (isActive) {
+      link.classList.add("active");
+      link.setAttribute("aria-current", "page");
+    }
+  });
+})();
+</script>
+
+<script src="/js/role-nav.js"></script>
+</body>
+</html>

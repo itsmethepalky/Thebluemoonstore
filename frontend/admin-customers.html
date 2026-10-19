@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customers — Admin | The Blue Moon</title>
+  <link rel="stylesheet" href="/css/store.css">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="store-body">
+
+<header class="store-header">
+  <div class="store-header-inner">
+    <a href="/" class="brand">
+      <span class="brand-mark"><i class="bi bi-moon-stars"></i></span>
+      <span>The Blue Moon</span>
+    </a>
+
+    <nav class="store-nav admin-nav">
+      <a href="/" title="Home"><i class="bi bi-house-door"></i></a>
+      <a href="/shop" title="Shop"><i class="bi bi-grid"></i></a>
+      <a href="/admin" title="Dashboard"><i class="bi bi-speedometer2"></i></a>
+      <a href="/admin/orders" title="Orders"><i class="bi bi-box-seam"></i></a>
+      <a href="/admin/products" title="Products"><i class="bi bi-boxes"></i></a>
+      <a href="/admin/customers" class="active" title="Customers"><i class="bi bi-people"></i></a>
+      <a href="/admin/account" title="Account"><i class="bi bi-person-circle"></i></a>
+    </nav>
+  </div>
+</header>
+
+<main class="store-container admin-container">
+
+  <div class="page-heading">
+    <div>
+      <span class="eyebrow">Administration</span>
+      <h1>Customers</h1>
+      <p>View customer accounts and credit information.</p>
+    </div>
+  </div>
+
+  <div id="adminError" class="notice error hidden"></div>
+
+  <section class="admin-toolbar">
+    <div class="admin-search">
+      <i class="bi bi-search"></i>
+      <input id="searchInput"
+             type="search"
+             placeholder="Search name, email or phone">
+    </div>
+
+    <button class="button secondary" id="refreshButton">
+      <i class="bi bi-arrow-clockwise"></i>
+      Refresh
+    </button>
+  </section>
+
+  <section class="admin-panel">
+
+    <div class="admin-panel-heading">
+      <div>
+        <span class="eyebrow">Store</span>
+        <h2>Customer Accounts</h2>
+      </div>
+
+      <span id="customerCount" class="admin-count">0</span>
+    </div>
+
+    <div id="customersList" class="admin-customers-list">
+      <div class="loading-state">Loading customers...</div>
+    </div>
+
+  </section>
+
+</main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/supabase.js"></script>
+  <script src="/js/auth-guard.js"></script>
+  <script src="/js/admin-auth.js"></script>
+
+<script>
+let customers = [];
+
+async function api(url, options = {}) {
+  const response = await window.adminFetch(url, options);
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(body.detail || "Request failed");
+  }
+
+  return body;
+}
+function money(value) {
+  return "Rs. " + Number(value || 0).toLocaleString("en-NP", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderCustomers() {
+  const search =
+    document.getElementById("searchInput")
+      .value.trim().toLowerCase();
+
+  const filtered = customers.filter(customer => {
+    if (!search) return true;
+
+    return [
+      customer.name,
+      customer.email,
+      customer.phone
+    ]
+      .join(" ")
+      .toLowerCase()
+      .includes(search);
+  });
+
+  document.getElementById("customerCount").textContent =
+    filtered.length;
+
+  const container =
+    document.getElementById("customersList");
+
+  if (!filtered.length) {
+    container.innerHTML =
+      '<div class="empty-state">No customers found.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(customer => `
+    <div class="admin-customer-row">
+
+      <div class="customer-avatar">
+        <i class="bi bi-person"></i>
+      </div>
+
+      <div class="admin-customer-main">
+        <strong>${escapeHtml(customer.name || "Unnamed")}</strong>
+        <span>${escapeHtml(customer.email || "No email")}</span>
+        <small>${escapeHtml(customer.phone || "No phone")}</small>
+      </div>
+
+      <div class="customer-credit">
+        <span>Credit limit</span>
+        <strong>${money(customer.credit_limit)}</strong>
+      </div>
+
+      <div class="customer-credit">
+        <span>Credit balance</span>
+        <strong>${money(customer.credit_balance)}</strong>
+      </div>
+
+      <div class="customer-created">
+        <span>Joined</span>
+        <strong>
+          ${new Date(customer.created_at).toLocaleDateString()}
+        </strong>
+      </div>
+
+    </div>
+  `).join("");
+}
+
+async function loadCustomers() {
+  const container =
+    document.getElementById("customersList");
+
+  container.innerHTML =
+    '<div class="loading-state">Loading customers...</div>';
+
+  try {
+    customers = await api("/api/admin/customers");
+    renderCustomers();
+  } catch (error) {
+    container.innerHTML = "";
+
+    const box =
+      document.getElementById("adminError");
+
+    box.textContent = error.message;
+    box.classList.remove("hidden");
+  }
+}
+
+document.getElementById("searchInput")
+  .addEventListener("input", renderCustomers);
+
+document.getElementById("refreshButton")
+  .addEventListener("click", loadCustomers);
+
+loadCustomers();
+</script>
+
+</body>
+</html>
