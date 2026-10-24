@@ -2,6 +2,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime, timezone
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -342,6 +343,61 @@ def frontend_orders():
 @app.get("/order", include_in_schema=False)
 def frontend_order():
     return serve_page("order.html")
+@app.get("/api/promos")
+def get_active_promotions():
+    now = datetime.now(timezone.utc).isoformat()
+
+    try:
+        response = (
+            supabase_admin
+            .table("store_promotions")
+            .select(
+                "id,code,name,description,discount_type,"
+                "discount_value,minimum_order_amount,"
+                "maximum_discount_amount,starts_at,expires_at,"
+                "usage_limit,usage_count,is_active"
+            )
+            .eq("is_active", True)
+            .lte("starts_at", now)
+            .order("created_at", desc=True)
+            .execute()
+        )
+
+        promotions = response.data or []
+
+        # Exclude expired promotions and promotions whose usage
+        # limits have been reached.
+        active_promotions = []
+
+        for promo in promotions:
+            expires_at = promo.get("expires_at")
+            usage_limit = promo.get("usage_limit")
+            usage_count = promo.get("usage_count", 0)
+
+            if expires_at:
+                expiry = datetime.fromisoformat(
+                    expires_at.replace("Z", "+00:00")
+                )
+
+                if expiry <= datetime.now(timezone.utc):
+                    continue
+
+            if (
+                usage_limit is not None
+                and usage_count >= usage_limit
+            ):
+                continue
+
+            active_promotions.append(promo)
+
+        return active_promotions
+
+    except Exception as exc:
+        print("ACTIVE PROMOTIONS ERROR:", repr(exc), flush=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to load promotions",
+        )
 
 
 app.mount(
