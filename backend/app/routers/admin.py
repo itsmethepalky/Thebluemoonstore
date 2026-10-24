@@ -1270,12 +1270,14 @@ def admin_promotions(
     return result.data or []
 
 
+
 @router.post("/promotions")
 def create_promotion(
     payload: PromotionCreate,
     admin=Depends(get_admin_user),
 ):
-    data = payload.model_dump()
+    # Exclude unset fields so PostgreSQL can apply column defaults.
+    data = payload.model_dump(exclude_unset=True)
 
     data["code"] = data["code"].strip().upper()
 
@@ -1292,6 +1294,13 @@ def create_promotion(
         data["description"] = (
             data["description"].strip() or None
         )
+
+    # Explicit null dates must also be omitted to use DB defaults.
+    if data.get("starts_at") is None:
+        data.pop("starts_at", None)
+
+    if data.get("expires_at") is None:
+        data.pop("expires_at", None)
 
     data = _validate_promotion_data(data)
 
@@ -1312,12 +1321,10 @@ def create_promotion(
         )
 
         if (
-            "duplicate"
-            in message
-            or "unique"
-            in message
-            or "store_promotions_code_unique"
-            in message
+            "duplicate" in message
+            or "unique" in message
+            or "store_promotions_code_unique" in message
+            or "idx_store_promotions_code_lower_unique" in message
         ):
             raise HTTPException(
                 status_code=409,
@@ -1336,6 +1343,7 @@ def create_promotion(
         )
 
     return result.data[0]
+
 
 
 @router.patch("/promotions/{promotion_id}")
