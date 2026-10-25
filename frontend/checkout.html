@@ -1277,14 +1277,13 @@ async function placeOrder(event) {
       await response.json();
 
 
-    if (!response.ok) {
+    
+if (!response.ok) {
+  throw new Error(
+    getErrorMessage(data, "Unable to place your order.")
+  );
+}
 
-      throw new Error(
-        data.detail ||
-        "Unable to place your order."
-      );
-
-    }
 
 
     /*
