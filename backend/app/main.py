@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timezone
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from .auth import get_current_customer, get_current_user
 from .routers import admin, catalog, checkout
@@ -14,6 +15,10 @@ from .supabase_retry import execute_read_with_retry
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = BASE_DIR / "frontend"
+
+
+class CustomerPhoneUpdate(BaseModel):
+    phone: str = Field(min_length=7, max_length=30)
 
 
 app = FastAPI(
@@ -43,7 +48,7 @@ async def security_headers(request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Permissions-Policy"] = (
-        "camera=(), microphone=(), geolocation=(), "
+        "camera=(), microphone=(), geolocation=(self), "
         "payment=(), usb=()"
     )
 
@@ -131,6 +136,52 @@ def account_me(
         "profile": current["profile"],
         "customer": current["customer"],
     }
+
+
+@app.put("/api/account/phone")
+def update_account_phone(
+    payload: CustomerPhoneUpdate,
+    current=Depends(get_current_customer),
+):
+    phone = payload.phone.strip()
+    if not 7 <= len(phone) <= 30:
+        raise HTTPException(
+            status_code=422,
+            detail="Phone number must be 7 to 30 characters.",
+        )
+
+    try:
+        supabase_admin.rpc(
+            "update_store_customer_phone",
+            {
+                "p_user_id": current["profile"]["id"],
+                "p_phone": phone,
+            },
+        ).execute()
+    except Exception as exc:
+        error_text = str(exc).lower()
+        print(
+            "ACCOUNT PHONE UPDATE ERROR:",
+            repr(exc),
+            flush=True,
+        )
+        if (
+            "pgrst202" in error_text
+            and "update_store_customer_phone" in error_text
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Phone updates are not installed yet. "
+                    "Apply database migration 016."
+                ),
+            ) from exc
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to update your phone number.",
+        ) from exc
+
+    return {"phone": phone}
 
 
 @app.get("/api/account/orders")
@@ -323,6 +374,16 @@ def frontend_checkout():
 @app.get("/login", include_in_schema=False)
 def frontend_login():
     return serve_page("login.html")
+
+
+@app.get("/forgot-password", include_in_schema=False)
+def frontend_forgot_password():
+    return serve_page("forgot-password.html")
+
+
+@app.get("/reset-password", include_in_schema=False)
+def frontend_reset_password():
+    return serve_page("reset-password.html")
 
 
 @app.get("/register", include_in_schema=False)

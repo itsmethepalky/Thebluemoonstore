@@ -106,7 +106,9 @@ def clean_product(product: dict) -> dict:
         "name": product.get("name"),
         "description": product.get("description"),
         "category_id": product.get("category_id"),
+        "category_name": product.get("category_name"),
         "brand_id": product.get("brand_id"),
+        "brand_name": product.get("brand_name"),
         "unit_price": product.get("unit_price"),
         "stock_quantity": product.get("stock_quantity"),
         "is_active": product.get("is_active"),
@@ -120,6 +122,53 @@ def clean_product(product: dict) -> dict:
             for image in images
         ],
     }
+
+
+def add_taxonomy_names(products: list[dict]) -> None:
+    category_ids = {
+        product["category_id"]
+        for product in products
+        if product.get("category_id") is not None
+    }
+    brand_ids = {
+        product["brand_id"]
+        for product in products
+        if product.get("brand_id") is not None
+    }
+
+    categories = {}
+    if category_ids:
+        response = execute_with_retry(
+            supabase_admin
+            .table("categories")
+            .select("id,name")
+            .in_("id", list(category_ids))
+        )
+        categories = {
+            category["id"]: category["name"]
+            for category in (response.data or [])
+        }
+
+    brands = {}
+    if brand_ids:
+        response = execute_with_retry(
+            supabase_admin
+            .table("brands")
+            .select("id,name")
+            .in_("id", list(brand_ids))
+        )
+        brands = {
+            brand["id"]: brand["name"]
+            for brand in (response.data or [])
+        }
+
+    for product in products:
+        product["category_name"] = categories.get(
+            product.get("category_id")
+        )
+        product["brand_name"] = brands.get(
+            product.get("brand_id")
+        )
 
 
 @router.get("/categories")
@@ -202,10 +251,12 @@ def list_products(
     query = query.order("name")
 
     response = execute_with_retry(query)
+    products = response.data or []
+    add_taxonomy_names(products)
 
     return [
         clean_product(product)
-        for product in (response.data or [])
+        for product in products
     ]
 
 
@@ -246,4 +297,6 @@ def get_product(product_id: int):
             detail="Product not found",
         )
 
-    return clean_product(response.data)
+    product = response.data
+    add_taxonomy_names([product])
+    return clean_product(product)

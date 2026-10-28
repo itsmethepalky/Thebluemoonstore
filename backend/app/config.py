@@ -12,6 +12,26 @@ class Settings:
         "SUPABASE_SERVICE_ROLE_KEY",
         "",
     )
+    OSM_NOMINATIM_URL: str = os.getenv(
+        "OSM_NOMINATIM_URL",
+        "https://nominatim.openstreetmap.org",
+    ).rstrip("/")
+    OSM_ROUTING_URL: str = os.getenv(
+        "OSM_ROUTING_URL",
+        "https://router.project-osrm.org",
+    ).rstrip("/")
+    STORE_CONTACT_EMAIL: str = os.getenv(
+        "STORE_CONTACT_EMAIL",
+        "",
+    )
+    STORE_ORIGIN_LATITUDE: str = os.getenv(
+        "STORE_ORIGIN_LATITUDE",
+        "",
+    )
+    STORE_ORIGIN_LONGITUDE: str = os.getenv(
+        "STORE_ORIGIN_LONGITUDE",
+        "",
+    )
 
     def validate(self):
         missing = []

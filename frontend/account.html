@@ -124,6 +124,28 @@
 
     </div>
 
+    <form id="accountPhoneForm" class="account-phone-form">
+      <label for="accountPhoneInput">Phone number for delivery</label>
+      <p class="muted">
+        Add or update your phone number so it is ready at checkout.
+      </p>
+      <div class="account-phone-controls">
+        <input
+          id="accountPhoneInput"
+          type="tel"
+          minlength="7"
+          maxlength="30"
+          autocomplete="tel"
+          placeholder="Enter your phone number"
+          required
+        >
+        <button id="saveAccountPhone" class="store-button primary" type="submit">
+          Save phone number
+        </button>
+      </div>
+      <small id="accountPhoneMessage" class="account-phone-message" aria-live="polite"></small>
+    </form>
+
     <div class="account-actions-grid">
 
       <a href="/orders" class="account-action">
@@ -199,6 +221,18 @@ const accountEmail =
 
 const accountPhone =
   document.getElementById("accountPhone");
+
+const accountPhoneForm =
+  document.getElementById("accountPhoneForm");
+
+const accountPhoneInput =
+  document.getElementById("accountPhoneInput");
+
+const saveAccountPhoneButton =
+  document.getElementById("saveAccountPhone");
+
+const accountPhoneMessage =
+  document.getElementById("accountPhoneMessage");
 
 const accountAddress =
   document.getElementById("accountAddress");
@@ -291,6 +325,11 @@ async function loadAccount() {
 
     const profile = data.profile || {};
     const customer = data.customer || {};
+    const savedPhone =
+      customer.phone ||
+      profile.phone ||
+      session.user?.user_metadata?.phone ||
+      "";
 
     accountName.textContent =
       customer.name ||
@@ -303,9 +342,9 @@ async function loadAccount() {
       "—";
 
     accountPhone.textContent =
-      customer.phone ||
-      profile.phone ||
+      savedPhone ||
       "Not provided";
+    accountPhoneInput.value = savedPhone;
 
     accountAddress.textContent =
       customer.address ||
@@ -330,6 +369,64 @@ async function loadAccount() {
       "Couldn't load your account. Please try again.";
   }
 }
+
+accountPhoneForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  accountPhoneMessage.textContent = "";
+  accountPhoneMessage.classList.remove("error", "good");
+
+  const phone = accountPhoneInput.value.trim();
+  if (phone.length < 7 || phone.length > 30) {
+    accountPhoneMessage.textContent =
+      "Enter a phone number between 7 and 30 characters.";
+    accountPhoneMessage.classList.add("error");
+    return;
+  }
+
+  saveAccountPhoneButton.disabled = true;
+  saveAccountPhoneButton.textContent = "Saving...";
+
+  try {
+    const {
+      data: { session },
+      error: sessionError
+    } = await window.supabaseClient.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+    if (!session?.access_token) {
+      throw new Error("Please sign in again to update your phone number.");
+    }
+
+    const response = await fetch(`${API_BASE}/api/account/phone`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ phone })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.detail || "Unable to update your phone number.");
+    }
+
+    accountPhoneInput.value = data.phone;
+    accountPhone.textContent = data.phone;
+    accountPhoneMessage.textContent =
+      "Phone number saved. It will be filled in at checkout.";
+    accountPhoneMessage.classList.add("good");
+  } catch (error) {
+    console.error("Phone update error:", error);
+    accountPhoneMessage.textContent =
+      error.message || "Unable to save your phone number.";
+    accountPhoneMessage.classList.add("error");
+  } finally {
+    saveAccountPhoneButton.disabled = false;
+    saveAccountPhoneButton.textContent = "Save phone number";
+  }
+});
 
 logoutBtn.addEventListener(
   "click",

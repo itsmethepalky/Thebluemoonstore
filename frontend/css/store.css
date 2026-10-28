@@ -1308,6 +1308,64 @@ textarea:focus-visible {
   margin-top: 8px;
 }
 
+.delivery-map {
+  width: 100%;
+  min-height: 300px;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--moon);
+}
+
+.delivery-map-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.delivery-address-results {
+  display: grid;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: var(--shadow-soft);
+}
+
+.delivery-address-results.hidden {
+  display: none;
+}
+
+.delivery-address-result {
+  padding: 11px 13px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.delivery-address-result:last-child {
+  border-bottom: 0;
+}
+
+.delivery-address-result:hover,
+.delivery-address-result:focus-visible {
+  background: var(--moon);
+}
+
+.delivery-location-message {
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.place-order-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .checkout-form-section .checkout-card form {
   gap: 10px;
 }
@@ -2192,6 +2250,14 @@ textarea:focus-visible {
   color: var(--ink-soft);
 }
 
+.admin-total-box > .delivery-charge-row {
+  margin-top: 4px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(47, 111, 79, 0.08);
+  color: var(--green-dark);
+}
+
 .admin-total-box .grand-total {
   margin-top: 8px;
   padding-top: 12px;
@@ -2248,6 +2314,39 @@ textarea:focus-visible {
 .account-field strong {
   font-size: 15px;
   overflow-wrap: anywhere;
+}
+
+.account-phone-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: white;
+}
+
+.account-phone-form > label {
+  font-weight: 700;
+}
+
+.account-phone-form p {
+  margin: 0;
+}
+
+.account-phone-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.account-phone-controls input {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.account-phone-message {
+  min-height: 1.3em;
 }
 
 /* =========================================================================
@@ -2768,7 +2867,7 @@ textarea:focus-visible {
 }
 
 .admin-shell {
-  width: min(1440px, calc(100% - 32px));
+  width: min(var(--container), calc(100% - 32px));
   margin: 0 auto;
   padding: 32px 0 64px;
 }
@@ -6623,5 +6722,46 @@ textarea:focus {
 
   .shop-clear {
     padding-left: 0;
+  }
+}
+
+/* Keep admin navigation consistent and wrap it below the brand on smaller screens. */
+@media (max-width: 1100px) {
+  .store-header:has(.admin-nav) .store-header-inner {
+    min-height: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  .store-header:has(.admin-nav) .store-header-inner > a {
+    flex: 0 0 100%;
+    justify-content: center;
+  }
+
+  .store-header:has(.admin-nav) .admin-nav {
+    position: static;
+    width: 100%;
+    margin: 0;
+    transform: none;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .store-header:has(.admin-nav) .admin-nav > a {
+    width: auto;
+    height: auto;
+    min-height: 40px;
+    min-width: max-content;
+    padding: 8px 10px;
+    gap: 6px;
+    font-size: .78rem;
+  }
+
+  .store-header:has(.admin-nav) .admin-nav > a span:not(.cart-count) {
+    display: inline;
   }
 }

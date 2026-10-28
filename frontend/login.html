@@ -63,6 +63,12 @@
           required
         >
 
+        <p class="auth-switch auth-secondary-link">
+          <a href="/forgot-password" id="forgotPasswordLink">
+            Forgot your password?
+          </a>
+        </p>
+
         <div
           id="loginTurnstile"
           class="cf-turnstile"
@@ -97,6 +103,7 @@ const form = document.getElementById("loginForm");
 const button = document.getElementById("loginButton");
 const message = document.getElementById("message");
 const createAccountLink = document.getElementById("createAccountLink");
+const forgotPasswordLink = document.getElementById("forgotPasswordLink");
 
 let turnstileWidgetId = null;
 
@@ -154,6 +161,14 @@ function showMessage(text, error = false) {
 
     createAccountLink.href =
       "/register?redirect=" +
+      encodeURIComponent(redirect);
+
+  }
+
+  if (redirect && forgotPasswordLink) {
+
+    forgotPasswordLink.href =
+      "/forgot-password?redirect=" +
       encodeURIComponent(redirect);
 
   }

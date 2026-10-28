@@ -1,9 +1,14 @@
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+)
 import httpx
 
 from .supabase import supabase_admin
 from .supabase_retry import execute_read_with_retry
+
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -23,26 +28,29 @@ def _auth_service_unavailable(exc: Exception):
     )
 
 
+def _unauthorized(detail="Invalid or expired authentication token"):
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(
         bearer_scheme
     ),
 ):
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    if credentials is None:
+        _unauthorized("Authentication required")
+
+    if credentials.scheme.lower() != "bearer":
+        _unauthorized("Bearer authentication required")
 
     token = credentials.credentials.strip()
 
     if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        _unauthorized("Authentication required")
 
     try:
         claims_response = supabase_admin.auth.get_claims(token)
@@ -52,7 +60,7 @@ def get_current_user(
 
     except Exception as exc:
         error_name = type(exc).__name__
-        error_text = repr(exc)
+        error_text = str(exc).lower()
 
         temporary_names = {
             "RemoteProtocolError",
@@ -65,63 +73,64 @@ def get_current_user(
             "ConnectionTerminated",
         }
 
+        temporary_indicators = (
+            "connection reset",
+            "connection refused",
+            "connection terminated",
+            "remoteprotocolerror",
+            "connecterror",
+            "timed out",
+            "temporarily unavailable",
+            "service unavailable",
+        )
+
         if (
             error_name in temporary_names
-            or "RemoteProtocolError" in error_text
-            or "ConnectionTerminated" in error_text
-            or "ConnectionResetError" in error_text
-            or "ConnectError" in error_text
+            or any(
+                indicator in error_text
+                for indicator in temporary_indicators
+            )
         ):
             _auth_service_unavailable(exc)
 
         print(
             "AUTH CLAIMS VALIDATION ERROR:",
             error_name,
-            error_text,
+            repr(exc),
             flush=True,
         )
 
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired authentication token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        _unauthorized()
 
     if not claims_response:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired authentication token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        _unauthorized()
 
-    claims = claims_response.get("claims")
+    claims = (
+        claims_response.get("claims")
+        if isinstance(claims_response, dict)
+        else None
+    )
 
-    if not claims:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired authentication token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    if not isinstance(claims, dict):
+        _unauthorized()
 
     user_id = claims.get("sub")
 
     if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication claims",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        _unauthorized("Invalid authentication claims")
 
     class ClaimsUser:
-        def __init__(self, claims):
-            self.id = claims.get("sub")
-            self.email = claims.get("email")
-            self.role = claims.get("role")
+        def __init__(self, user_claims):
+            self.id = user_claims.get("sub")
+            self.email = user_claims.get("email")
+            self.role = user_claims.get("role")
 
     return ClaimsUser(claims)
 
 
-def get_current_customer(user=Depends(get_current_user)):
+def get_current_customer(
+    user=Depends(get_current_user),
+):
     user_id = str(user.id)
 
     try:
@@ -143,11 +152,15 @@ def get_current_customer(user=Depends(get_current_user)):
             repr(exc),
             flush=True,
         )
+
         raise HTTPException(
-            status_code=503,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Account service temporarily unavailable",
             headers={"Retry-After": "2"},
         )
+
+    except HTTPException:
+        raise
 
     except Exception as exc:
         print(
@@ -156,8 +169,9 @@ def get_current_customer(user=Depends(get_current_user)):
             repr(exc),
             flush=True,
         )
+
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to load customer profile",
         )
 
@@ -165,19 +179,19 @@ def get_current_customer(user=Depends(get_current_user)):
 
     if not profile:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Customer profile not found",
         )
 
     if not profile.get("is_active", False):
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is inactive",
         )
 
     if profile.get("role") != "customer":
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Customer account required",
         )
 
@@ -201,11 +215,15 @@ def get_current_customer(user=Depends(get_current_user)):
             repr(exc),
             flush=True,
         )
+
         raise HTTPException(
-            status_code=503,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Account service temporarily unavailable",
             headers={"Retry-After": "2"},
         )
+
+    except HTTPException:
+        raise
 
     except Exception as exc:
         print(
@@ -214,8 +232,9 @@ def get_current_customer(user=Depends(get_current_user)):
             repr(exc),
             flush=True,
         )
+
         raise HTTPException(
-            status_code=500,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to load customer account",
         )
 
@@ -223,7 +242,7 @@ def get_current_customer(user=Depends(get_current_user)):
 
     if not customer:
         raise HTTPException(
-            status_code=403,
+            status_code=status.HTTP_403_FORBIDDEN,
             detail="Customer account not found",
         )
 

@@ -1,0 +1,20 @@
+name: Keep Render service awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check deployed service health
+        run: |
+          response="$(curl --fail --silent --show-error --retry 2 --max-time 30 \
+            https://thebluemoonstore.onrender.com/api/health)"
+          echo "$response" | jq --exit-status '.status == "ok"' > /dev/null
+          echo "The Blue Moon Store health check passed."

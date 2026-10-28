@@ -546,14 +546,14 @@ function renderProduct(product) {
 
 
   metaCategory.textContent =
-    product.category_id
-      ? `Category #${product.category_id}`
+    product.category_name
+      ? product.category_name
       : "—";
 
 
   metaBrand.textContent =
-    product.brand_id
-      ? `Brand #${product.brand_id}`
+    product.brand_name
+      ? product.brand_name
       : "—";
 
 

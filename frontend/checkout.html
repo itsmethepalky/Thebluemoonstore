@@ -7,6 +7,12 @@
   <title>Checkout — The Blue Moon</title>
 
   <link rel="stylesheet" href="css/store.css">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase.js"></script>
@@ -212,6 +218,86 @@
                 rows="4"
                 placeholder="Enter your complete delivery address"
               ></textarea>
+              <small
+                id="deliveryCoordinateDisplay"
+                class="delivery-location-message hidden"
+                aria-live="polite"
+              ></small>
+              <a
+                id="deliveryGoogleMapsLink"
+                class="delivery-google-maps-link hidden"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Open selected location in Google Maps</a>
+
+              <label for="deliveryAddressSearch">
+                Find your address on the map
+              </label>
+
+              <input
+                id="deliveryAddressSearch"
+                type="text"
+                autocomplete="off"
+                disabled
+                placeholder="Search address or place"
+                aria-controls="deliveryAddressResults"
+                aria-expanded="false"
+              >
+              <button
+                id="searchDeliveryAddress"
+                type="button"
+                class="store-button secondary"
+                disabled
+              >
+                <i class="bi bi-search"></i>
+                Search address
+              </button>
+              <div
+                id="deliveryAddressResults"
+                class="delivery-address-results hidden"
+                role="listbox"
+              ></div>
+
+              <button
+                id="toggleDeliveryMap"
+                type="button"
+                class="store-button secondary"
+                aria-controls="deliveryMapPanel"
+                aria-expanded="false"
+              >
+                <i class="bi bi-geo-alt"></i>
+                Set location on map
+              </button>
+
+              <div id="deliveryMapPanel" class="delivery-map-panel hidden">
+                <button
+                  id="useCurrentLocation"
+                  type="button"
+                  class="store-button secondary"
+                  disabled
+                >
+                  <i class="bi bi-crosshair"></i>
+                  Use my current location
+                </button>
+
+                <div
+                  id="deliveryMap"
+                  class="delivery-map"
+                  aria-label="Select your delivery location on the map"
+                ></div>
+              </div>
+
+              <small
+                id="deliveryLocationMessage"
+                class="delivery-location-message"
+                aria-live="polite"
+              >
+                Search for an address, choose a map point, or use your current location. Map data © OpenStreetMap contributors.
+              </small>
+
+              <input id="deliveryLatitude" type="hidden">
+              <input id="deliveryLongitude" type="hidden">
 
             </div>
 
@@ -343,6 +429,7 @@
               id="placeOrderButton"
               type="submit"
               class="store-button primary place-order-button"
+              disabled
             >
               Place Order
             </button>
@@ -406,7 +493,7 @@
             <span>Delivery</span>
 
             <strong id="checkoutDelivery">
-              NPR 100.00
+            NPR 0.00
             </strong>
 
           </div>
@@ -526,6 +613,11 @@
 
 </footer>
 
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
 
 <script>
 
@@ -589,6 +681,42 @@ const phone =
 const shippingAddress =
   document.getElementById("shippingAddress");
 
+const deliveryAddressSearch =
+  document.getElementById("deliveryAddressSearch");
+
+const deliveryAddressResults =
+  document.getElementById("deliveryAddressResults");
+
+const searchDeliveryAddressButton =
+  document.getElementById("searchDeliveryAddress");
+
+const deliveryLatitude =
+  document.getElementById("deliveryLatitude");
+
+const deliveryLongitude =
+  document.getElementById("deliveryLongitude");
+
+const deliveryLocationMessage =
+  document.getElementById("deliveryLocationMessage");
+
+const deliveryCoordinateDisplay =
+  document.getElementById("deliveryCoordinateDisplay");
+
+const deliveryGoogleMapsLink =
+  document.getElementById("deliveryGoogleMapsLink");
+
+const deliveryMapElement =
+  document.getElementById("deliveryMap");
+
+const useCurrentLocationButton =
+  document.getElementById("useCurrentLocation");
+
+const toggleDeliveryMapButton =
+  document.getElementById("toggleDeliveryMap");
+
+const deliveryMapPanel =
+  document.getElementById("deliveryMapPanel");
+
 const paymentMethodInputs =
   document.querySelectorAll(
     'input[name="paymentMethod"]'
@@ -614,6 +742,12 @@ const checkoutDeliveryDiscount =
 
 let appliedPromoCode = null;
 let promoPreviewRequestId = 0;
+let deliveryPricingValid = false;
+let deliveryMap = null;
+let deliveryMarker = null;
+let deliveryPreviewTimer = null;
+let deliverySearchRequestId = 0;
+let reverseLookupRequestId = 0;
 
 
 function formatPrice(value) {
@@ -665,6 +799,26 @@ function updateCartCount(cart) {
 
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function safeImageUrl(value) {
+  try {
+    const url = new URL(String(value), window.location.origin);
+    if (url.protocol === "https:" || url.protocol === "http:") {
+      return escapeHtml(url.href);
+    }
+  } catch (error) {
+    console.warn("Ignoring invalid checkout product image URL.");
+  }
+  return "";
+}
 
 
 function setPromoMessage(message, type = "") {
@@ -713,6 +867,10 @@ function buildPreviewPayload(cart) {
       document.querySelector(
         'input[name="paymentMethod"]:checked'
       )?.value || "cod",
+    delivery_latitude:
+      Number(deliveryLatitude.value),
+    delivery_longitude:
+      Number(deliveryLongitude.value),
     notes: notes.value.trim() || null,
     promo_code: promoCode.value.trim() || null,
     items: cart.map(item => ({
@@ -722,32 +880,71 @@ function buildPreviewPayload(cart) {
   };
 }
 
+function clearDeliveryQuote() {
+  checkoutDelivery.textContent = "—";
+  checkoutTotal.textContent = "—";
+
+  if (checkoutDeliveryDiscountRow) {
+    checkoutDeliveryDiscountRow.classList.add("hidden");
+  }
+
+  if (checkoutDeliveryDiscount) {
+    checkoutDeliveryDiscount.textContent = "- NPR 0.00";
+  }
+}
+
 async function previewCheckoutPricing() {
   const cart = getCart();
 
   if (!cart.length) {
-    resetPromoState();
+    deliveryPricingValid = false;
+    placeOrderButton.disabled = true;
+    clearDeliveryQuote();
+    return false;
+  }
+
+  const phoneNumber = phone.value.trim();
+  if (phoneNumber.length < 7 || phoneNumber.length > 30) {
+    deliveryPricingValid = false;
+    placeOrderButton.disabled = true;
+    clearDeliveryQuote();
+    deliveryLocationMessage.textContent =
+      "Enter a valid phone number (7–30 characters) to calculate delivery pricing.";
     return false;
   }
 
   const code = promoCode.value.trim();
-
-  if (!code) {
-    resetPromoState();
+  const latitude = Number(deliveryLatitude.value);
+  const longitude = Number(deliveryLongitude.value);
+  if (
+    !deliveryLatitude.value ||
+    !deliveryLongitude.value ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
+    deliveryPricingValid = false;
+    placeOrderButton.disabled = true;
+    clearDeliveryQuote();
+    deliveryLocationMessage.textContent =
+      "Select a delivery location to calculate the driving route and delivery fee.";
     return false;
   }
 
   const requestId = ++promoPreviewRequestId;
+  deliveryPricingValid = false;
+  placeOrderButton.disabled = true;
+  clearDeliveryQuote();
+  deliveryLocationMessage.textContent =
+    "Calculating driving route and delivery fee...";
 
-  if (applyPromoButton) {
+  if (applyPromoButton && code) {
     applyPromoButton.disabled = true;
     applyPromoButton.textContent = "Applying...";
   }
 
-  setPromoMessage(
-    "Checking promo code...",
-    "loading"
-  );
+  if (code) {
+    setPromoMessage("Checking promo code...", "loading");
+  }
 
   try {
     const {
@@ -801,6 +998,11 @@ async function previewCheckoutPricing() {
     checkoutTotal.textContent =
       formatPrice(data.total_amount);
 
+    deliveryPricingValid = true;
+    placeOrderButton.disabled = false;
+    deliveryLocationMessage.textContent =
+      `Driving route: ${Number(data.delivery_distance_km).toFixed(3)} km. Delivery includes the base fare plus NPR 50 per kilometer.`;
+
     const deliveryDiscount =
       Number(data.delivery_discount || 0);
 
@@ -825,19 +1027,26 @@ async function previewCheckoutPricing() {
       }
     }
 
-    appliedPromoCode =
-      data.promo_code || code;
-
-    if (applyPromoButton) {
-      applyPromoButton.disabled = false;
-      applyPromoButton.textContent = "Applied";
-      applyPromoButton.classList.add("is-applied");
+    if (code) {
+      appliedPromoCode = data.promo_code || code;
+      if (applyPromoButton) {
+        applyPromoButton.disabled = false;
+        applyPromoButton.textContent = "Applied";
+        applyPromoButton.classList.add("is-applied");
+      }
+      setPromoMessage(
+        `Promo code ${appliedPromoCode} applied.`,
+        "success"
+      );
+    } else {
+      appliedPromoCode = null;
+      if (applyPromoButton) {
+        applyPromoButton.disabled = false;
+        applyPromoButton.textContent = "Apply";
+        applyPromoButton.classList.remove("is-applied");
+      }
+      resetPromoState();
     }
-
-    setPromoMessage(
-      `Promo code ${appliedPromoCode} applied.`,
-      "success"
-    );
 
     return true;
 
@@ -847,6 +1056,11 @@ async function previewCheckoutPricing() {
     }
 
     appliedPromoCode = null;
+    deliveryPricingValid = false;
+    placeOrderButton.disabled = true;
+    clearDeliveryQuote();
+    deliveryLocationMessage.textContent =
+      error.message || "Unable to calculate the delivery route.";
 
     if (applyPromoButton) {
       applyPromoButton.disabled = false;
@@ -854,11 +1068,12 @@ async function previewCheckoutPricing() {
       applyPromoButton.classList.remove("is-applied");
     }
 
-    setPromoMessage(
-      error.message ||
-      "Unable to apply promo code.",
-      "error"
-    );
+    if (code) {
+      setPromoMessage(
+        error.message || "Unable to apply promo code.",
+        "error"
+      );
+    }
 
     return false;
   }
@@ -902,6 +1117,344 @@ async function applyPromoCode() {
   await previewCheckoutPricing();
 }
 
+function scheduleDeliveryPreview() {
+  window.clearTimeout(deliveryPreviewTimer);
+  promoPreviewRequestId += 1;
+  deliveryPricingValid = false;
+  placeOrderButton.disabled = true;
+  clearDeliveryQuote();
+  deliveryPreviewTimer = window.setTimeout(
+    previewCheckoutPricing,
+    400
+  );
+}
+
+function setSelectedDeliveryLocation(latitude, longitude, address) {
+  reverseLookupRequestId += 1;
+  deliveryLatitude.value = String(latitude);
+  deliveryLongitude.value = String(longitude);
+  const selectedAddress = String(address).slice(0, 500);
+  shippingAddress.value = selectedAddress;
+  deliveryAddressSearch.value = selectedAddress;
+  deliveryCoordinateDisplay.textContent =
+    `Latitude: ${Number(latitude).toFixed(6)}, Longitude: ${Number(longitude).toFixed(6)}`;
+  deliveryCoordinateDisplay.classList.remove("hidden");
+  deliveryGoogleMapsLink.href =
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+      `${latitude},${longitude}`
+    )}`;
+  deliveryGoogleMapsLink.classList.remove("hidden");
+
+  const position = [latitude, longitude];
+  if (deliveryMarker) {
+    deliveryMarker.setLatLng(position);
+  } else {
+    deliveryMarker = L.marker(position, { draggable: true })
+      .addTo(deliveryMap);
+    deliveryMarker.on("dragend", () => {
+      const markerPosition = deliveryMarker.getLatLng();
+      selectDeliveryCoordinates(
+        markerPosition.lat,
+        markerPosition.lng
+      );
+    });
+  }
+  deliveryMap.setView(position, 16);
+
+  deliveryLocationMessage.textContent =
+    "Location selected. Calculating the driving route and delivery fee...";
+  scheduleDeliveryPreview();
+}
+
+async function requestAddressLookup(path, query = {}) {
+  const {
+    data: { session }
+  } = await window.supabaseClient.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Please sign in again to select a delivery address.");
+  }
+
+  const params = new URLSearchParams(query);
+  const response = await fetch(
+    `${API_BASE}/api/checkout/${path}?${params}`,
+    {
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        Accept: "application/json"
+      },
+      cache: "no-store"
+    }
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.detail || "Address lookup is unavailable.");
+  }
+  return data;
+}
+
+async function selectDeliveryCoordinates(latitude, longitude) {
+  const requestId = ++reverseLookupRequestId;
+  promoPreviewRequestId += 1;
+  deliveryLatitude.value = String(latitude);
+  deliveryLongitude.value = String(longitude);
+  deliveryPricingValid = false;
+  placeOrderButton.disabled = true;
+  clearDeliveryQuote();
+  const position = [latitude, longitude];
+  if (deliveryMarker) {
+    deliveryMarker.setLatLng(position);
+  } else {
+    deliveryMarker = L.marker(position, { draggable: true })
+      .addTo(deliveryMap);
+    deliveryMarker.on("dragend", () => {
+      const markerPosition = deliveryMarker.getLatLng();
+      selectDeliveryCoordinates(
+        markerPosition.lat,
+        markerPosition.lng
+      );
+    });
+  }
+  deliveryMap.setView(position, 16);
+  deliveryLocationMessage.textContent =
+    "Looking up the selected address...";
+
+  try {
+    const data = await requestAddressLookup(
+      "address-reverse",
+      { latitude, longitude }
+    );
+    if (requestId !== reverseLookupRequestId) {
+      return;
+    }
+    setSelectedDeliveryLocation(
+      latitude,
+      longitude,
+      data.display_name
+    );
+  } catch (error) {
+    if (requestId === reverseLookupRequestId) {
+      deliveryLatitude.value = "";
+      deliveryLongitude.value = "";
+      deliveryCoordinateDisplay.classList.add("hidden");
+      deliveryGoogleMapsLink.classList.add("hidden");
+      deliveryMarker?.remove();
+      deliveryMarker = null;
+      deliveryLocationMessage.textContent =
+        error.message || "Could not find an address at this location.";
+    }
+  }
+}
+
+function renderAddressResults(results) {
+  deliveryAddressResults.replaceChildren();
+  if (!results.length) {
+    deliveryAddressResults.classList.add("hidden");
+    deliveryAddressSearch.setAttribute("aria-expanded", "false");
+    return;
+  }
+
+  results.forEach(result => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "delivery-address-result";
+    option.setAttribute("role", "option");
+    option.textContent = result.display_name;
+    option.addEventListener("click", () => {
+      setSelectedDeliveryLocation(
+        result.latitude,
+        result.longitude,
+        result.display_name
+      );
+      renderAddressResults([]);
+    });
+    deliveryAddressResults.appendChild(option);
+  });
+  deliveryAddressResults.classList.remove("hidden");
+  deliveryAddressSearch.setAttribute("aria-expanded", "true");
+}
+
+async function searchDeliveryAddress(query) {
+  const requestId = ++deliverySearchRequestId;
+  try {
+    const results = await requestAddressLookup(
+      "address-search",
+      { q: query }
+    );
+    if (requestId === deliverySearchRequestId) {
+      renderAddressResults(results);
+      deliveryLocationMessage.textContent = results.length
+        ? "Choose an address result or select your exact location on the map."
+        : "No matching addresses found. Try a nearby place or use the map.";
+    }
+  } catch (error) {
+    if (requestId === deliverySearchRequestId) {
+      renderAddressResults([]);
+      deliveryLocationMessage.textContent =
+        error.message || "Address search is unavailable.";
+    }
+  }
+}
+
+async function initializeDeliveryMap() {
+  try {
+    if (!window.L) {
+      throw new Error("OpenStreetMap could not be loaded.");
+    }
+    deliveryMap = L.map(deliveryMapElement).setView(
+      [27.7, 85.3],
+      12
+    );
+    L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>'
+      }
+    ).addTo(deliveryMap);
+    deliveryMap.on("click", event => {
+      selectDeliveryCoordinates(
+        event.latlng.lat,
+        event.latlng.lng
+      );
+    });
+    deliveryAddressSearch.disabled = false;
+    searchDeliveryAddressButton.disabled = false;
+    useCurrentLocationButton.disabled = false;
+    if (shippingAddress.value.trim()) {
+      deliveryAddressSearch.value = shippingAddress.value.trim();
+      deliveryLocationMessage.textContent =
+        "Search for your saved address and choose a result, or select the exact location on the map.";
+    }
+    return true;
+  } catch (error) {
+    deliveryLocationMessage.textContent =
+      error.message || "Address map service is unavailable.";
+    placeOrderButton.disabled = true;
+    toggleDeliveryMapButton.disabled = true;
+    return false;
+  }
+}
+
+function toggleDeliveryMap(forceOpen) {
+  const shouldOpen =
+    forceOpen ?? deliveryMapPanel.classList.contains("hidden");
+
+  deliveryMapPanel.classList.toggle("hidden", !shouldOpen);
+  toggleDeliveryMapButton.setAttribute(
+    "aria-expanded",
+    String(shouldOpen)
+  );
+  toggleDeliveryMapButton.innerHTML = shouldOpen
+    ? '<i class="bi bi-geo-alt"></i> Hide map'
+    : '<i class="bi bi-geo-alt"></i> Set location on map';
+
+  if (shouldOpen && deliveryMap) {
+    window.setTimeout(() => deliveryMap.invalidateSize(), 0);
+  }
+}
+
+deliveryAddressSearch.addEventListener("input", () => {
+  deliverySearchRequestId += 1;
+  reverseLookupRequestId += 1;
+  promoPreviewRequestId += 1;
+  deliveryLatitude.value = "";
+  deliveryLongitude.value = "";
+  deliveryCoordinateDisplay.classList.add("hidden");
+  deliveryGoogleMapsLink.classList.add("hidden");
+  deliveryPricingValid = false;
+  placeOrderButton.disabled = true;
+  deliveryMarker?.remove();
+  deliveryMarker = null;
+  deliveryLocationMessage.textContent =
+    "Search for this address or select a point on the map.";
+  renderAddressResults([]);
+});
+
+searchDeliveryAddressButton.addEventListener("click", () => {
+  const query = deliveryAddressSearch.value.trim();
+  if (query.length < 3) {
+    deliveryLocationMessage.textContent =
+      "Enter at least 3 characters to search.";
+    return;
+  }
+  searchDeliveryAddressButton.disabled = true;
+  deliveryLocationMessage.textContent = "Searching addresses...";
+  searchDeliveryAddress(query).finally(() => {
+    searchDeliveryAddressButton.disabled = false;
+  });
+});
+
+toggleDeliveryMapButton.addEventListener("click", () => {
+  toggleDeliveryMap();
+});
+
+deliveryAddressSearch.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    searchDeliveryAddressButton.click();
+  }
+});
+
+shippingAddress.addEventListener("input", () => {
+  reverseLookupRequestId += 1;
+  promoPreviewRequestId += 1;
+  deliveryLatitude.value = "";
+  deliveryLongitude.value = "";
+  deliveryCoordinateDisplay.classList.add("hidden");
+  deliveryGoogleMapsLink.classList.add("hidden");
+  deliveryPricingValid = false;
+  placeOrderButton.disabled = true;
+  clearDeliveryQuote();
+  deliveryMarker?.remove();
+  deliveryMarker = null;
+  deliveryLocationMessage.textContent =
+    "Select this address on the map to calculate the driving route.";
+});
+
+phone.addEventListener("input", () => {
+  if (deliveryLatitude.value && deliveryLongitude.value) {
+    scheduleDeliveryPreview();
+  } else {
+    deliveryPricingValid = false;
+    placeOrderButton.disabled = true;
+    clearDeliveryQuote();
+  }
+});
+
+function requestCurrentLocation() {
+  if (!navigator.geolocation) {
+    deliveryLocationMessage.textContent =
+      "Location detection is not supported by this browser.";
+    return false;
+  }
+
+  useCurrentLocationButton.disabled = true;
+  deliveryLocationMessage.textContent = "Finding your location...";
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      useCurrentLocationButton.disabled = false;
+      selectDeliveryCoordinates(
+        position.coords.latitude,
+        position.coords.longitude
+      );
+    },
+    error => {
+      useCurrentLocationButton.disabled = false;
+      deliveryLocationMessage.textContent =
+        error.code === 1
+          ? "Location permission was denied. Search for your address or select it on the map."
+          : "Unable to detect your location. Search for your address or select it on the map.";
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+  );
+  return true;
+}
+
+useCurrentLocationButton.addEventListener("click", () => {
+  requestCurrentLocation();
+});
+
 function renderCart() {
 
   const cart =
@@ -940,7 +1493,7 @@ function renderCart() {
               item.image_url
                 ? `
                   <img
-                    src="${item.image_url}"
+                    src="${safeImageUrl(item.image_url)}"
                     alt=""
                   >
                 `
@@ -952,7 +1505,7 @@ function renderCart() {
           <div class="checkout-item-info">
 
             <strong>
-              ${item.name || "Product"}
+              ${escapeHtml(item.name || "Product")}
             </strong>
 
             <span>
@@ -1000,7 +1553,7 @@ function renderCart() {
     formatPrice(0);
 
   checkoutDelivery.textContent =
-    formatPrice(100);
+    "—";
 
   /*
    * This is only a local estimate.
@@ -1008,7 +1561,7 @@ function renderCart() {
    * subtotal, discount, delivery charge and final total.
    */
   checkoutTotal.textContent =
-    formatPrice(subtotal + 100);
+    "—";
 
 
   return true;
@@ -1126,6 +1679,7 @@ async function loadCustomer() {
   phone.value =
     customer.phone ||
     profile.phone ||
+    session.user?.user_metadata?.phone ||
     "";
 
   shippingAddress.value =
@@ -1159,12 +1713,18 @@ if (promoCode) {
   promoCode.addEventListener(
     "input",
     () => {
+      deliveryPricingValid = false;
+      placeOrderButton.disabled = true;
+      clearDeliveryQuote();
       if (
         appliedPromoCode &&
         promoCode.value.trim().toUpperCase() !==
           String(appliedPromoCode).toUpperCase()
       ) {
         resetPromoState();
+      }
+      if (deliveryLatitude.value && deliveryLongitude.value) {
+        scheduleDeliveryPreview();
       }
     }
   );
@@ -1189,6 +1749,13 @@ async function placeOrder(event) {
 
     return;
 
+  }
+
+  if (!deliveryPricingValid) {
+    showCheckoutError(
+      "Select a delivery location and wait for route pricing before placing your order."
+    );
+    return;
   }
 
 
@@ -1221,6 +1788,12 @@ async function placeOrder(event) {
 
     shipping_address:
       shippingAddress.value.trim(),
+
+    delivery_latitude:
+      Number(deliveryLatitude.value),
+
+    delivery_longitude:
+      Number(deliveryLongitude.value),
 
     payment_method:
       document.querySelector(
@@ -1418,7 +1991,7 @@ if (!response.ok) {
     );
 
 
-    placeOrderButton.disabled = false;
+    placeOrderButton.disabled = !deliveryPricingValid;
 
     placeOrderButton.textContent =
       "Place Order";
@@ -1467,6 +2040,10 @@ async function initialize() {
     checkoutContent.classList.remove(
       "hidden"
     );
+    const mapReady = await initializeDeliveryMap();
+    if (mapReady) {
+      requestCurrentLocation();
+    }
 
   } catch (error) {
 

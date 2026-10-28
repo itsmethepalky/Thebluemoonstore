@@ -18,27 +18,34 @@
       <span class="logo-sub">EVERYDAY ESSENTIALS</span>
     </a>
 
-    <nav class="store-nav admin-nav">
+    <nav class="store-nav admin-nav" aria-label="Admin navigation">
       <a href="/" title="Home" aria-label="Home">
         <i class="bi bi-house-door"></i>
+        <span>Home</span>
       </a>
-      <a href="/shop" title="Shop" aria-label="Shop">
+      <a href="/shop" title="Store" aria-label="Store">
         <i class="bi bi-grid"></i>
+        <span>Store</span>
       </a>
       <a href="/admin" class="active" title="Dashboard" aria-label="Dashboard">
         <i class="bi bi-speedometer2"></i>
+        <span>Dashboard</span>
       </a>
       <a href="/admin/orders" title="Orders" aria-label="Orders">
         <i class="bi bi-box-seam"></i>
+        <span>Orders</span>
       </a>
       <a href="/admin/products" title="Products" aria-label="Products">
         <i class="bi bi-boxes"></i>
+        <span>Products</span>
       </a>
       <a href="/admin/customers" title="Customers" aria-label="Customers">
         <i class="bi bi-people"></i>
+        <span>Customers</span>
       </a>
       <a href="/admin/account" title="Account" aria-label="Account">
         <i class="bi bi-person-circle"></i>
+        <span>Account</span>
       </a>
     </nav>
   </div>
@@ -157,15 +164,15 @@
 
       <!-- Delivery -->
       <div class="admin-promo-card">
-        <h3>Delivery Charge</h3>
+        <h3>Delivery Base Fare</h3>
 
         <p>
-          Current delivery charge:
+          Base fare:
           <strong id="currentDeliveryCharge">—</strong>
         </p>
 
         <form id="deliveryForm" class="admin-promo-form">
-          <label for="deliveryCharge">New delivery charge</label>
+          <label for="deliveryCharge">New delivery base fare</label>
 
           <input
             id="deliveryCharge"
@@ -175,9 +182,11 @@
             required
           >
 
+          <small>Distance delivery adds NPR 50 per driving kilometer to this base fare.</small>
+
           <button type="submit" class="admin-action admin-promo-button">
             <i class="bi bi-truck"></i>
-            <span>Update Delivery Charge</span>
+            <span>Update Base Fare</span>
           </button>
         </form>
       </div>

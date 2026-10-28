@@ -4,16 +4,20 @@ import hmac
 import json
 import os
 import secrets
+import threading
+import time
 import urllib.parse
 import urllib.request
 from decimal import Decimal, InvalidOperation
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
 from ..auth import get_current_customer
+from ..config import settings
 from ..supabase import supabase_admin
 
 
@@ -47,6 +51,9 @@ STORE_PUBLIC_URL = os.getenv(
     "STORE_PUBLIC_URL",
     "http://127.0.0.1:8001",
 ).rstrip("/")
+NOMINATIM_MIN_INTERVAL_SECONDS = 1.0
+_nominatim_lock = threading.Lock()
+_last_nominatim_request = 0.0
 
 
 class CheckoutItem(BaseModel):
@@ -57,6 +64,8 @@ class CheckoutItem(BaseModel):
 class CheckoutRequest(BaseModel):
     phone: str = Field(min_length=7, max_length=30)
     shipping_address: str = Field(min_length=5, max_length=500)
+    delivery_latitude: float = Field(ge=-90, le=90)
+    delivery_longitude: float = Field(ge=-180, le=180)
 
     # The Store exposes only:
     #   cod = Cash on Delivery
@@ -80,6 +89,179 @@ class CheckoutRequest(BaseModel):
         min_length=1,
         max_length=100,
     )
+
+
+def _store_origin() -> tuple[float, float]:
+    try:
+        origin_latitude = float(settings.STORE_ORIGIN_LATITUDE)
+        origin_longitude = float(settings.STORE_ORIGIN_LONGITUDE)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Delivery route service is not configured.",
+        ) from exc
+
+    if (
+        not -90 <= origin_latitude <= 90
+        or not -180 <= origin_longitude <= 180
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Delivery route service is not configured.",
+        )
+
+    return origin_latitude, origin_longitude
+
+
+def _nominatim_request(path: str, params: dict) -> httpx.Response:
+    global _last_nominatim_request
+
+    with _nominatim_lock:
+        elapsed = time.monotonic() - _last_nominatim_request
+        if elapsed < NOMINATIM_MIN_INTERVAL_SECONDS:
+            time.sleep(NOMINATIM_MIN_INTERVAL_SECONDS - elapsed)
+
+        headers = {
+            "User-Agent": (
+                "TheBlueMoonStore/1.0 "
+                "(https://thebluemoonstore.onrender.com"
+                + (
+                    f"; contact: {settings.STORE_CONTACT_EMAIL}"
+                    if settings.STORE_CONTACT_EMAIL
+                    else ""
+                )
+                + ")"
+            ),
+            "Accept": "application/json",
+        }
+        try:
+            response = httpx.get(
+                f"{settings.OSM_NOMINATIM_URL}{path}",
+                params=params,
+                headers=headers,
+                timeout=6.0,
+            )
+        except httpx.RequestError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Address search is temporarily unavailable.",
+            ) from exc
+        finally:
+            _last_nominatim_request = time.monotonic()
+
+    if response.is_error:
+        raise HTTPException(
+            status_code=503,
+            detail="Address search is temporarily unavailable.",
+        )
+    return response
+
+
+def _calculate_delivery_distance_km(
+    latitude: float,
+    longitude: float,
+) -> Decimal:
+    origin_latitude, origin_longitude = _store_origin()
+
+    try:
+        response = httpx.get(
+            (
+                f"{settings.OSM_ROUTING_URL}/route/v1/driving/"
+                f"{origin_longitude},{origin_latitude};"
+                f"{longitude},{latitude}"
+            ),
+            params={
+                "alternatives": "true",
+                "overview": "false",
+                "steps": "false",
+            },
+            timeout=8.0,
+        )
+    except httpx.RequestError as exc:
+        print(
+            "OSM ROUTE REQUEST ERROR:",
+            type(exc).__name__,
+            flush=True,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to calculate the delivery route. Please try again.",
+        ) from exc
+
+    if response.is_error:
+        print(
+            "OSM ROUTE SERVICE ERROR:",
+            response.status_code,
+            flush=True,
+        )
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to calculate the delivery route. Please try again.",
+        )
+
+    try:
+        routes = response.json().get("routes") or []
+        route_distances = [
+            Decimal(str(route["distance"]))
+            for route in routes
+        ]
+    except (
+        AttributeError,
+        IndexError,
+        KeyError,
+        InvalidOperation,
+        TypeError,
+        ValueError,
+    ) as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="No driving route is available for this address.",
+        ) from exc
+
+    if not route_distances or any(
+        not distance.is_finite() or distance < 0
+        for distance in route_distances
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="No driving route is available for this address.",
+        )
+
+    distance_meters = min(route_distances)
+    return distance_meters / Decimal("1000")
+
+
+def _delivery_rpc_arguments(
+    payload: CheckoutRequest,
+) -> dict:
+    distance_km = _calculate_delivery_distance_km(
+        payload.delivery_latitude,
+        payload.delivery_longitude,
+    )
+    return {
+        "p_delivery_distance_km": str(distance_km),
+        "distance_km": distance_km,
+    }
+
+
+def _checkout_migration_missing(exc: Exception) -> str | None:
+    error_text = str(exc).lower()
+    if "pgrst202" not in error_text:
+        return None
+    if "create_store_order_with_delivery_location" in error_text:
+        return (
+            "Delivery location storage is not installed. "
+            "Apply database migration 015 in Supabase."
+        )
+    if (
+        "preview_store_checkout_with_delivery" in error_text
+        or "create_store_order_with_delivery" in error_text
+    ):
+        return (
+            "Route-based delivery pricing is not installed. "
+            "Apply database migration 014 in Supabase."
+        )
+    return None
 
 
 def _signature(message: str) -> str:
@@ -304,6 +486,81 @@ def _mark_order_paid(
     return response
 
 
+@router.get("/address-search")
+def address_search(
+    q: str = Query(min_length=3, max_length=120),
+    current=Depends(get_current_customer),
+):
+    response = _nominatim_request(
+        "/search",
+        {
+            "q": q.strip(),
+            "format": "jsonv2",
+            "addressdetails": 1,
+            "limit": 5,
+            "countrycodes": "np",
+            **(
+                {"email": settings.STORE_CONTACT_EMAIL}
+                if settings.STORE_CONTACT_EMAIL
+                else {}
+            ),
+        },
+    )
+    try:
+        results = response.json()
+        return [
+            {
+                "display_name": item["display_name"],
+                "latitude": float(item["lat"]),
+                "longitude": float(item["lon"]),
+            }
+            for item in results
+            if item.get("display_name")
+        ]
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Address search returned an invalid response.",
+        ) from exc
+
+
+@router.get("/address-reverse")
+def reverse_delivery_address(
+    latitude: float = Query(ge=-90, le=90),
+    longitude: float = Query(ge=-180, le=180),
+    current=Depends(get_current_customer),
+):
+    response = _nominatim_request(
+        "/reverse",
+        {
+            "lat": latitude,
+            "lon": longitude,
+            "format": "jsonv2",
+            "zoom": 18,
+            **(
+                {"email": settings.STORE_CONTACT_EMAIL}
+                if settings.STORE_CONTACT_EMAIL
+                else {}
+            ),
+        },
+    )
+    try:
+        result = response.json()
+        address = result.get("display_name")
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Address lookup returned an invalid response.",
+        ) from exc
+
+    if not address:
+        raise HTTPException(
+            status_code=404,
+            detail="No address found at that map location.",
+        )
+    return {"display_name": address}
+
+
 
 @router.post("/preview")
 def preview_checkout(
@@ -342,10 +599,11 @@ def preview_checkout(
         if payload.payment_method == "esewa"
         else "cod"
     )
+    delivery = _delivery_rpc_arguments(payload)
 
     try:
         response = supabase_admin.rpc(
-            "preview_store_checkout",
+            "preview_store_checkout_with_delivery",
             {
                 "p_customer_id": customer["id"],
                 "p_phone": payload.phone.strip(),
@@ -357,6 +615,9 @@ def preview_checkout(
                     if payload.promo_code
                     else None
                 ),
+                "p_delivery_distance_km": delivery[
+                    "p_delivery_distance_km"
+                ],
             },
         ).execute()
 
@@ -368,6 +629,13 @@ def preview_checkout(
             repr(exc),
             flush=True,
         )
+
+        migration_detail = _checkout_migration_missing(exc)
+        if migration_detail:
+            raise HTTPException(
+                status_code=503,
+                detail=migration_detail,
+            ) from exc
 
         # These messages are generated by the authoritative
         # preview_store_checkout PostgreSQL function.
@@ -479,6 +747,7 @@ def preview_checkout(
         ),
         "promo_code": result.get("promo_code"),
         "total_amount": result.get("total_amount", 0),
+        "delivery_distance_km": str(delivery["distance_km"]),
     }
 
 
@@ -506,10 +775,11 @@ def create_checkout_order(
         if payload.payment_method == "esewa"
         else "cod"
     )
+    delivery = _delivery_rpc_arguments(payload)
 
     try:
         response = supabase_admin.rpc(
-            "create_store_order",
+            "create_store_order_with_delivery_location",
             {
                 "p_customer_id": customer["id"],
                 "p_phone": payload.phone.strip(),
@@ -526,14 +796,26 @@ def create_checkout_order(
                     if payload.promo_code
                     else None
                 ),
+                "p_delivery_distance_km": delivery[
+                    "p_delivery_distance_km"
+                ],
+                "p_delivery_latitude":
+                    payload.delivery_latitude,
+                "p_delivery_longitude":
+                    payload.delivery_longitude,
             },
         ).execute()
 
     except Exception as exc:
         print("CHECKOUT RPC ERROR:", repr(exc), flush=True)
         message = str(exc)
+        migration_detail = _checkout_migration_missing(exc)
 
-        if "Insufficient stock" in message:
+        if migration_detail:
+            detail = migration_detail
+            status_code = 503
+
+        elif "Insufficient stock" in message:
             detail = (
                 "One or more products do not have enough stock."
             )
@@ -619,6 +901,7 @@ def create_checkout_order(
                 "discount": result["discount"],
                 "delivery_charge": result["delivery_charge"],
                 "promo_code": result.get("promo_code"),
+                "delivery_distance_km": str(delivery["distance_km"]),
                 "total_amount": result["total_amount"],
             },
         }
@@ -669,6 +952,7 @@ def create_checkout_order(
             "discount": result["discount"],
             "delivery_charge": result["delivery_charge"],
             "promo_code": result.get("promo_code"),
+            "delivery_distance_km": str(delivery["distance_km"]),
             "total_amount": result["total_amount"],
         },
         "esewa": {

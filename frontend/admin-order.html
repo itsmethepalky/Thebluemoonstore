@@ -174,7 +174,26 @@
         </div>
         <div>
           <span>Address</span>
-          <strong id="shippingAddress">—</strong>
+          <strong>
+            <a
+              id="shippingAddress"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+            >—</a>
+          </strong>
+          <small id="deliveryCoordinates" class="muted"></small>
+        </div>
+        <div id="deliveryMapLinkContainer" class="hidden">
+          <span>Delivery location</span>
+          <strong>
+            <a
+              id="deliveryMapLink"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+            >Open in Google Maps</a>
+          </strong>
         </div>
       </div>
     </section>
@@ -203,6 +222,11 @@
         <div>
           <span>Tax</span>
           <strong id="tax">—</strong>
+        </div>
+
+        <div class="delivery-charge-row">
+          <span>Delivery Charge</span>
+          <strong id="deliveryCharge">—</strong>
         </div>
 
         <div class="grand-total">
@@ -396,6 +420,42 @@ async function loadOrder() {
     document.getElementById("shippingAddress").textContent =
       order.shipping_address || customer.address || "—";
 
+    const latitude = Number(order.delivery_latitude);
+    const longitude = Number(order.delivery_longitude);
+    const shippingAddressLink =
+      document.getElementById("shippingAddress");
+    const mapCoordinatesDisplay =
+      document.getElementById("deliveryCoordinates");
+    if (
+      order.delivery_latitude !== null &&
+      order.delivery_latitude !== undefined &&
+      order.delivery_longitude !== null &&
+      order.delivery_longitude !== undefined &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180
+    ) {
+      const googleMapsUrl =
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${latitude},${longitude}`
+        )}`;
+      shippingAddressLink.href = googleMapsUrl;
+      mapCoordinatesDisplay.textContent =
+        `Latitude: ${latitude.toFixed(6)}, Longitude: ${longitude.toFixed(6)}`;
+      document.getElementById("deliveryMapLink").href = googleMapsUrl;
+      document.getElementById(
+        "deliveryMapLinkContainer"
+      ).classList.remove("hidden");
+    } else {
+      shippingAddressLink.removeAttribute("href");
+      document.getElementById(
+        "deliveryMapLinkContainer"
+      ).classList.add("hidden");
+    }
+
     document.getElementById("subtotal").textContent =
       money(order.subtotal);
 
@@ -404,6 +464,9 @@ async function loadOrder() {
 
     document.getElementById("tax").textContent =
       money(order.tax);
+
+    document.getElementById("deliveryCharge").textContent =
+      money(order.delivery_charge);
 
     document.getElementById("total").textContent =
       money(order.total_amount);
